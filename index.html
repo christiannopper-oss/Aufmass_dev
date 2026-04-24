@@ -2354,28 +2354,42 @@ function schnittUndo(){
 
 function confirmSchnitt(){
   if(schnittPts.length<5)return;
-  if(!scale){alert('Bitte zuerst kalibrieren!');return;}
-  const geo=getSchnittGeometry(schnittPts,scaleSchnitt||scale,currentFloor&&currentFloor.dach_config?currentFloor.dach_config:null);
-  if(!geo)return;
-  const{kniestockH,firstH,neigung,dachbreite,deckeH,ptsCount,neigungLeft,neigungRight}=geo;
-  schnittResult={kniestockH,firstH,neigung,dachbreite,deckeH,ptsCount,neigungLeft,neigungRight};
-  // Save to floor
-  // Update persistedRaw for schnitt pts
+  // Bug fix: im Schnitt-View ist scaleSchnitt die aktive Skala, nicht scale
+  const activeScale=scaleSchnitt||scale;
+  if(!activeScale){alert('Bitte zuerst das Referenzmaß im Schnitt setzen!');return;}
+  let geo;
+  try{
+    geo=getSchnittGeometry(schnittPts,activeScale,currentFloor?.dach_config||null);
+  }catch(e){
+    console.error('getSchnittGeometry Fehler:',e);
+    alert('Fehler bei der Auswertung: '+e.message);
+    return;
+  }
+  if(!geo){alert('Schnitt konnte nicht ausgewertet werden. Mindestens 5 Punkte mit erkennbarer First- und Bodenebene benötigt.');return;}
+  // Bug fix: hasKehlbalken aus geo destructuren
+  const{kniestockH,firstH,neigung,dachbreite,deckeH,ptsCount,neigungLeft,neigungRight,hasKehlbalken}=geo;
+  schnittResult={kniestockH,firstH,neigung,dachbreite,deckeH,ptsCount,neigungLeft,neigungRight,hasKehlbalken};
   persistedSchnittPtsRaw=normalizePtsForView(schnittPts,'schnitt');
   if(currentFloor){
     const normPts=normalizePtsForView(schnittPts,'schnitt');
-    const updDach={...currentFloor.dach_config,kniestockH,firstH,neigung,dachbreite,deckeH,schnittPts:normPts,ptsCount,neigungLeft,neigungRight};
+    const updDach={...currentFloor.dach_config,kniestockH,firstH,neigung,dachbreite,deckeH,schnittPts:normPts,ptsCount,neigungLeft,neigungRight,hasKehlbalken};
     sb.patch('floors',{dach_config:updDach},'?id=eq.'+currentFloor.id);
     currentFloor.dach_config=updDach;
   }
-  let msg='Schnitt ausgewertet!\nKniestock: '+kniestockH.toFixed(2)+'m\nFirst: '+firstH.toFixed(2)+'m';
+  let msg='✓ Schnitt ausgewertet!
+Kniestock: '+kniestockH.toFixed(2)+' m
+First: '+firstH.toFixed(2)+' m';
   if(Math.abs(neigungLeft-neigungRight)>0.5){
-    msg+='\nNeigung links: '+neigungLeft.toFixed(1)+'° · rechts: '+neigungRight.toFixed(1)+'°';
+    msg+='
+Neigung links: '+neigungLeft.toFixed(1)+'°  ·  rechts: '+neigungRight.toFixed(1)+'°';
   } else {
-    msg+='\nNeigung: '+neigung.toFixed(1)+'°';
+    msg+='
+Neigung: '+neigung.toFixed(1)+'°';
   }
-  msg+='\nDachbreite: '+dachbreite.toFixed(2)+'m';
-  if(hasKehlbalken)msg+='\nKehlbalken / flache Decke: '+deckeH.toFixed(2)+'m';
+  msg+='
+Dachbreite: '+dachbreite.toFixed(2)+' m';
+  if(hasKehlbalken)msg+='
+Kehlbalken erkannt – flache Decke: '+deckeH.toFixed(2)+' m';
   alert(msg);
   setView('grundriss');
 }
