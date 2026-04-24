@@ -1109,70 +1109,92 @@ function getSchnittGeometry(pts,scaleValue,fallbackDc=null){
   if(!pts||pts.length<5||!scaleValue)return null;
   const n=pts.length;
 
-  // ── Geometrische Auswertung – unabhängig von Punkt-Reihenfolge ──
+  // ── Geometrische Auswertung – rein aus Polygonkanten, reihenfolgeunabhängig ──
   // Y-Achse auf Canvas: kleiner Y = höher im Raum
 
-  // 1. Bodenebene: die zwei untersten Punkte (größtes Y)
-  const byY=[...pts].sort((a,b)=>b.y-a.y);
-  const bottomPts=byY.slice(0,2).sort((a,b)=>a.x-b.x); // links→rechts
-  const bottomLeft=bottomPts[0];
-  const bottomRight=bottomPts[1];
-  const bottomY=(bottomLeft.y+bottomRight.y)/2;
-
-  // 2. Firstlinie: die höchsten Punkte (kleinstes Y)
-  // Unterscheide Spitzdach (1 First-Punkt) vs. Kehlbalken (2 First-Punkte)
-  const minY=Math.min(...pts.map(p=>p.y));
-  const firstPts=pts.filter(p=>p.y<=minY+8/scaleValue).sort((a,b)=>a.x-b.x);
-  const firstLineStart=firstPts[0];
-  const firstLineEnd=firstPts[firstPts.length-1];
-  const firstY=(firstLineStart.y+firstLineEnd.y)/2;
-
-  // 3. Traufpunkte: Punkte auf mittlerer Höhe (weder Boden noch First)
-  const remainingPts=pts.filter(p=>
-    !bottomPts.includes(p) && !firstPts.includes(p)
-  ).sort((a,b)=>a.x-b.x);
-
-  // Traufe links = linker verbleibender Punkt, Traufe rechts = rechter
-  const traufeL=remainingPts.length>0?remainingPts[0]:bottomLeft;
-  const traufeR=remainingPts.length>1?remainingPts[remainingPts.length-1]:bottomRight;
-
-  // 4. Kniestockhöhe = Abstand Boden → Traufe
-  const kniestockH=Math.abs(traufeL.y-bottomY)/scaleValue;
-
-  // 5. Firsthöhe = Abstand Boden → First
-  const firstH=Math.abs(firstY-bottomY)/scaleValue;
-
-  // 6. Neigungen: geometisch korrekte Paarung First ↔ Traufe
-  // Nicht einfach links-links paaren, sondern nächste Nachbarn finden
-  function neigungZwischen(p1,p2){
-    const dx=Math.abs(p1.x-p2.x)/scaleValue;
-    const dy=Math.abs(p1.y-p2.y)/scaleValue;
+  // Hilfsfunktion: Neigung einer Kante in Grad
+  function edgeNeigung(a,b){
+    const dx=Math.abs(b.x-a.x)/scaleValue;
+    const dy=Math.abs(b.y-a.y)/scaleValue;
     return dx>0.01?Math.atan(dy/dx)*180/Math.PI:90;
   }
-  // Traufe links = der Trauf-Punkt der am nächsten zum linken First-Punkt liegt
-  let neigungLeft=90,neigungRight=90;
-  if(remainingPts.length>=1){
-    // Finde nächsten Trauf-Punkt zu firstLineStart
-    const nearestToFirstL=remainingPts.reduce((best,p)=>
-      Math.hypot(p.x-firstLineStart.x,p.y-firstLineStart.y)<Math.hypot(best.x-firstLineStart.x,best.y-firstLineStart.y)?p:best
-    );
-    neigungLeft=neigungZwischen(firstLineStart,nearestToFirstL);
-    // Traufe rechts: nächster Trauf-Punkt zu firstLineEnd (kann gleich sein bei Spitzdach)
-    const nearestToFirstR=remainingPts.reduce((best,p)=>
-      Math.hypot(p.x-firstLineEnd.x,p.y-firstLineEnd.y)<Math.hypot(best.x-firstLineEnd.x,best.y-firstLineEnd.y)?p:best
-    );
-    neigungRight=neigungZwischen(firstLineEnd,nearestToFirstR);
-    // Aktualisiere traufeL/traufeR basierend auf geometischer Nähe
-    // (überschreibt die reine X-Sort-Zuweisung von oben)
-  }
-  let neigung=(neigungLeft+neigungRight)/2;
-  if(!Number.isFinite(neigung)&&fallbackDc?.neigung)neigung=fallbackDc.neigung;
 
-  // 7. Dachbreite und Kehlbalken-Erkennung
+  // 1. Jeden Punkt klassifizieren nach Y-Position
+  const ys=pts.map(p=>p.y);
+  const minY=Math.min(...ys);
+  const maxY=Math.max(...ys);
+  const span=maxY-minY;
+
+  // Schwellen: oberes Drittel = First, unteres Viertel = Boden, Rest = Traufe
+  const firstThresh = minY + span*0.20;  // Punkte nahe oben → First
+  const bottomThresh= maxY - span*0.20;  // Punkte nahe unten → Boden
+
+  const firstPts  = pts.filter(p=>p.y<=firstThresh).sort((a,b)=>a.x-b.x);
+  const bottomPts = pts.filter(p=>p.y>=bottomThresh).sort((a,b)=>a.x-b.x);
+  const traufPts  = pts.filter(p=>p.y>firstThresh&&p.y<bottomThresh).sort((a,b)=>a.x-b.x);
+
+  // Fallback: wenn Schwellen zu eng sind, nimm extremste Punkte
+  const _firstPts = firstPts.length>=1 ? firstPts :
+    [...pts].sort((a,b)=>a.y-b.y).slice(0,pts.length>=6?2:1);
+  const _bottomPts = bottomPts.length>=2 ? bottomPts :
+    [...pts].sort((a,b)=>b.y-a.y).slice(0,2).sort((a,b)=>a.x-b.x);
+  const _traufPts = traufPts.length>=2 ? traufPts :
+    pts.filter(p=>!_firstPts.includes(p)&&!_bottomPts.includes(p)).sort((a,b)=>a.x-b.x);
+
+  const firstLineStart=_firstPts[0];
+  const firstLineEnd  =_firstPts[_firstPts.length-1];
+  const firstY        =(_firstPts.reduce((s,p)=>s+p.y,0))/_firstPts.length;
+
+  const bottomLeft =_bottomPts[0];
+  const bottomRight=_bottomPts[_bottomPts.length-1];
+  const bottomY    =(_bottomPts.reduce((s,p)=>s+p.y,0))/_bottomPts.length;
+
+  // Traufen: linkester und rechtester Trauf-Punkt
+  // Bei fehlendem Trauf-Punkt Boden-Punkte als Traufe verwenden
+  const traufeL=_traufPts.length>0?_traufPts[0]:bottomLeft;
+  const traufeR=_traufPts.length>1?_traufPts[_traufPts.length-1]:bottomRight;
+
+  // 2. Kniestockhöhe und Firsthöhe
+  const kniestockH=Math.abs(traufeL.y-bottomY)/scaleValue;
+  const firstH    =Math.abs(firstY-bottomY)/scaleValue;
+
+  // 3. Neigungen: aus den Polygon-KANTEN ablesen (nicht aus Punkt-Paaren raten)
+  // Gehe alle Kanten durch, klassifiziere sie als Schräge wenn sie
+  // einen First-Punkt mit einem Nicht-First-Punkt verbinden
+  let neigungLeft=null, neigungRight=null;
+  const firstSet=new Set(_firstPts);
+
+  for(let i=0;i<n;i++){
+    const a=pts[i], b=pts[(i+1)%n];
+    const aIsFirst=firstSet.has(a), bIsFirst=firstSet.has(b);
+    // Schräge = eine Seite ist First, andere ist Traufe/Boden
+    if(aIsFirst!==bIsFirst){
+      // Welche Seite? First-Punkt bestimmt ob links oder rechts
+      const firstPt=aIsFirst?a:b;
+      const neig=edgeNeigung(a,b);
+      if(!Number.isFinite(neig))continue;
+      // Links = First-Punkt liegt links der Mitte
+      const midX=(Math.max(...pts.map(p=>p.x))+Math.min(...pts.map(p=>p.x)))/2;
+      if(firstPt.x<=midX){
+        if(neigungLeft===null||neig>0)neigungLeft=neig;
+      } else {
+        if(neigungRight===null||neig>0)neigungRight=neig;
+      }
+    }
+  }
+  // Fallback: wenn nur eine Seite erkannt (Spitzdach von einer Seite gezeichnet)
+  if(neigungLeft===null&&neigungRight!==null)neigungLeft=neigungRight;
+  if(neigungRight===null&&neigungLeft!==null)neigungRight=neigungLeft;
+  if(neigungLeft===null)neigungLeft=fallbackDc?.neigung||38;
+  if(neigungRight===null)neigungRight=fallbackDc?.neigung||38;
+
+  const neigung=(neigungLeft+neigungRight)/2;
+
+  // 4. Dachbreite und Kehlbalken
   const xs=pts.map(p=>p.x);
   const dachbreite=(Math.max(...xs)-Math.min(...xs))/scaleValue;
-  const hasKehlbalken=firstPts.length>=2&&
-    Math.abs(firstLineStart.x-firstLineEnd.x)/scaleValue>0.1;
+  const hasKehlbalken=_firstPts.length>=2&&
+    Math.abs(firstLineStart.x-firstLineEnd.x)/scaleValue>0.15;
   const deckeH=hasKehlbalken?firstH:0;
 
   return {
