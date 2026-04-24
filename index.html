@@ -642,6 +642,11 @@ async function openFloor(id){
   if(currentFloor.dach_config?.aktiv && !scaleSchnitt && !schnittImg){
     viewMode='schnitt';
   }
+  // Sync active state on view buttons
+  const _gbtn=document.getElementById('btn-gdr');
+  const _sbtn=document.getElementById('btn-sch');
+  if(_gbtn)_gbtn.classList.toggle('active',viewMode==='grundriss');
+  if(_sbtn)_sbtn.classList.toggle('active',viewMode==='schnitt');
   scale=viewMode==='schnitt'?scaleSchnitt:scaleGrundriss;
   refConfirmed=(scale!==null)&&(viewMode==='schnitt'?refPtsSchnitt.length===2:refPtsGrundriss.length===2);
   refPts=viewMode==='schnitt'?[...refPtsSchnitt]:[...refPtsGrundriss];
@@ -2056,6 +2061,8 @@ cv.addEventListener('mousemove',e=>{
   draw();
 });
 cv.addEventListener('mousedown',e=>{
+  // Ignore synthetic mouse events fired after touch on iOS/iPadOS
+  if(Date.now()-lastTouchEnd<500)return;
   if(e.button===1||(e.button===0&&e.altKey)||(e.button===0&&spaceDown)){isPanning=true;lastPX=e.clientX;lastPY=e.clientY;cv.style.cursor='grabbing';e.preventDefault();return;}
   if(e.button!==0)return;
   const w=toW(e.clientX,e.clientY);
@@ -2078,7 +2085,7 @@ cv.addEventListener('wheel',e=>{
   e.preventDefault();
   const isPinch=e.ctrlKey;
   const raw=e.deltaMode===1?e.deltaY*20:e.deltaY;
-  const factor=isPinch?raw*0.003:raw*0.0004;
+  const factor=isPinch?raw*0.008:raw*0.0004;
   const nz=Math.min(Math.max(zoom*(1-factor),.15),12);
   const r=cv.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
   panX=mx-(mx-panX)*(nz/zoom);panY=my-(my-panY)*(nz/zoom);
@@ -2096,8 +2103,8 @@ cv.addEventListener('pointerdown',e=>{
   const ri=hitRefPoint(w.x,w.y);if(ri!==null){dragRefIdx=ri;return;}
   if(tool==='select'){const pt=hitPoint(w.x,w.y);if(pt){drag=pt;return;}}
   isPanning=false;
-  // longpress activates magnifier in draw AND ref mode
-  if(tool==='draw'||tool==='ref'){
+  // longpress activates magnifier in draw, ref AND schnitt draw mode
+  if(tool==='draw'||tool==='ref'||schnittDrawMode){
     lpTimer=setTimeout(()=>{lpTimer=null;const ww=toW(lpStartX,lpStartY);const s=getSnap(ww.x,ww.y);showMag(lpStartX,lpStartY,s.x,s.y);},LP_MS);
   }
 },{passive:false});
@@ -2127,6 +2134,9 @@ cv.addEventListener('pointerup',async e=>{
   if(moved<MOVE_THR){const w=toW(e.clientX,e.clientY);if(tool==='select'){const ed=hitEdge(w.x,w.y);if(ed){rooms[ed.roomIdx].points.splice(ed.edgeIdx+1,0,{x:ed.x,y:ed.y});updSidebar();draw();return;}}handleTap(w.x,w.y);}
 },{passive:false});
 cv.addEventListener('pointercancel',e=>{delete activePtr[e.pointerId];clearLp();hideMag();drag=null;dragRefIdx=null;isPanning=false;pinchDist=null;});
+// Track last touch end to suppress iOS synthetic mouse events
+let lastTouchEnd=0;
+cv.addEventListener('pointerup',e=>{if(e.pointerType!=='mouse')lastTouchEnd=Date.now();},{passive:true,capture:true});
 
 // ── PDF LOAD ──────────────────────────────────────────────
 function handleDrop(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf')loadPDF(f);}
