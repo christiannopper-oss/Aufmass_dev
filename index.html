@@ -1142,15 +1142,29 @@ function getSchnittGeometry(pts,scaleValue,fallbackDc=null){
   // 5. Firsthöhe = Abstand Boden → First
   const firstH=Math.abs(firstY-bottomY)/scaleValue;
 
-  // 6. Neigungen links und rechts
-  const dxLeft=Math.abs(firstLineStart.x-traufeL.x)/scaleValue;
-  const dyLeft=Math.abs(firstLineStart.y-traufeL.y)/scaleValue;
-  const neigungLeft=dxLeft>0?Math.atan(dyLeft/dxLeft)*180/Math.PI:90;
-
-  const dxRight=Math.abs(traufeR.x-firstLineEnd.x)/scaleValue;
-  const dyRight=Math.abs(traufeR.y-firstLineEnd.y)/scaleValue;
-  const neigungRight=dxRight>0?Math.atan(dyRight/dxRight)*180/Math.PI:90;
-
+  // 6. Neigungen: geometisch korrekte Paarung First ↔ Traufe
+  // Nicht einfach links-links paaren, sondern nächste Nachbarn finden
+  function neigungZwischen(p1,p2){
+    const dx=Math.abs(p1.x-p2.x)/scaleValue;
+    const dy=Math.abs(p1.y-p2.y)/scaleValue;
+    return dx>0.01?Math.atan(dy/dx)*180/Math.PI:90;
+  }
+  // Traufe links = der Trauf-Punkt der am nächsten zum linken First-Punkt liegt
+  let neigungLeft=90,neigungRight=90;
+  if(remainingPts.length>=1){
+    // Finde nächsten Trauf-Punkt zu firstLineStart
+    const nearestToFirstL=remainingPts.reduce((best,p)=>
+      Math.hypot(p.x-firstLineStart.x,p.y-firstLineStart.y)<Math.hypot(best.x-firstLineStart.x,best.y-firstLineStart.y)?p:best
+    );
+    neigungLeft=neigungZwischen(firstLineStart,nearestToFirstL);
+    // Traufe rechts: nächster Trauf-Punkt zu firstLineEnd (kann gleich sein bei Spitzdach)
+    const nearestToFirstR=remainingPts.reduce((best,p)=>
+      Math.hypot(p.x-firstLineEnd.x,p.y-firstLineEnd.y)<Math.hypot(best.x-firstLineEnd.x,best.y-firstLineEnd.y)?p:best
+    );
+    neigungRight=neigungZwischen(firstLineEnd,nearestToFirstR);
+    // Aktualisiere traufeL/traufeR basierend auf geometischer Nähe
+    // (überschreibt die reine X-Sort-Zuweisung von oben)
+  }
   let neigung=(neigungLeft+neigungRight)/2;
   if(!Number.isFinite(neigung)&&fallbackDc?.neigung)neigung=fallbackDc.neigung;
 
@@ -2319,7 +2333,7 @@ function schnittUndo(){
 function confirmSchnitt(){
   if(schnittPts.length<5)return;
   if(!scale){alert('Bitte zuerst kalibrieren!');return;}
-  const geo=getSchnittGeometry(schnittPts,scale,currentFloor&&currentFloor.dach_config?currentFloor.dach_config:null);
+  const geo=getSchnittGeometry(schnittPts,scaleSchnitt||scale,currentFloor&&currentFloor.dach_config?currentFloor.dach_config:null);
   if(!geo)return;
   const{kniestockH,firstH,neigung,dachbreite,deckeH,ptsCount,neigungLeft,neigungRight}=geo;
   schnittResult={kniestockH,firstH,neigung,dachbreite,deckeH,ptsCount,neigungLeft,neigungRight};
@@ -2332,11 +2346,14 @@ function confirmSchnitt(){
     sb.patch('floors',{dach_config:updDach},'?id=eq.'+currentFloor.id);
     currentFloor.dach_config=updDach;
   }
-  let msg='Schnitt ausgewertet!\nKniestock: '+kniestockH.toFixed(2)+'m\nFirst: '+firstH.toFixed(2)+'m\nNeigung: '+neigung.toFixed(1)+'°\nDachbreite: '+dachbreite.toFixed(2)+'m';
-  if(ptsCount===6){
-    msg+='\nFirstlinie: P3–P4';
-    msg+='\nLinks: '+neigungLeft.toFixed(1)+'° · Rechts: '+neigungRight.toFixed(1)+'°';
+  let msg='Schnitt ausgewertet!\nKniestock: '+kniestockH.toFixed(2)+'m\nFirst: '+firstH.toFixed(2)+'m';
+  if(Math.abs(neigungLeft-neigungRight)>0.5){
+    msg+='\nNeigung links: '+neigungLeft.toFixed(1)+'° · rechts: '+neigungRight.toFixed(1)+'°';
+  } else {
+    msg+='\nNeigung: '+neigung.toFixed(1)+'°';
   }
+  msg+='\nDachbreite: '+dachbreite.toFixed(2)+'m';
+  if(hasKehlbalken)msg+='\nKehlbalken / flache Decke: '+deckeH.toFixed(2)+'m';
   alert(msg);
   setView('grundriss');
 }
