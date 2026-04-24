@@ -2386,20 +2386,14 @@ function confirmSchnitt(){
     sb.patch('floors',{dach_config:updDach},'?id=eq.'+currentFloor.id);
     currentFloor.dach_config=updDach;
   }
-  let msg='✓ Schnitt ausgewertet!
-Kniestock: '+kniestockH.toFixed(2)+' m
-First: '+firstH.toFixed(2)+' m';
+  let msg='✓ Schnitt ausgewertet!\nKniestock: '+kniestockH.toFixed(2)+' m\nFirst: '+firstH.toFixed(2)+' m';
   if(Math.abs(neigungLeft-neigungRight)>0.5){
-    msg+='
-Neigung links: '+neigungLeft.toFixed(1)+'°  ·  rechts: '+neigungRight.toFixed(1)+'°';
+    msg+='\nNeigung links: '+neigungLeft.toFixed(1)+'°  ·  rechts: '+neigungRight.toFixed(1)+'°';
   } else {
-    msg+='
-Neigung: '+neigung.toFixed(1)+'°';
+    msg+='\nNeigung: '+neigung.toFixed(1)+'°';
   }
-  msg+='
-Dachbreite: '+dachbreite.toFixed(2)+' m';
-  if(hasKehlbalken)msg+='
-Kehlbalken erkannt – flache Decke: '+deckeH.toFixed(2)+' m';
+  msg+='\nDachbreite: '+dachbreite.toFixed(2)+' m';
+  if(hasKehlbalken)msg+='\nKehlbalken erkannt – flache Decke: '+deckeH.toFixed(2)+' m';
   alert(msg);
   setView('grundriss');
 }
