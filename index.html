@@ -2756,11 +2756,11 @@ function updToolbarLockState(){
 // ── KI-ERKENNUNG ────────────────────────────────────────────
 let kiResults=null; // {ref:{pts,lengthM}, rooms:[{name,points,accepted}]}
 
-function getApiKey(){return localStorage.getItem('openai_api_key')||'';}
+function getApiKey(){return localStorage.getItem('anthropic_api_key')||'';}
 function saveApiKey(){
   const k=document.getElementById('ki-apikey-input').value.trim();
-  if(!k.startsWith('sk-')){alert('Ungültiger OpenAI API-Key. Muss mit sk- beginnen.');return;}
-  localStorage.setItem('openai_api_key',k);
+  if(!k.startsWith('sk-ant-')){alert('Ungültiger API-Key. Muss mit sk-ant- beginnen.');return;}
+  localStorage.setItem('anthropic_api_key',k);
   document.getElementById('ki-apikey-overlay').style.display='none';
   runKIAnalyse();
 }
@@ -2796,8 +2796,8 @@ async function runKIAnalyse(){
 
     // Draw current plan to offscreen canvas for base64
     // ── KI Image Rendering ──
-    // We render the image at a fixed resolution for ChatGPT Vision.
-    // ChatGPT returns coords [0..1] relative to the rendered image.
+    // We render the image at a fixed resolution for Claude.
+    // Claude returns coords [0..1] relative to the rendered image.
     // We map back: canvasCoord = imgOffset + relCoord * imgDisplaySize
     const activeW=viewMode==='schnitt'?schnittW:imgW;
     const activeH=viewMode==='schnitt'?schnittH:imgH;
@@ -2806,7 +2806,7 @@ async function runKIAnalyse(){
     const rot=viewMode==='schnitt'?imgRotationSchnitt:imgRotationGrundriss;
     const odd=rot===90||rot===270;
 
-    // Rendered image dimensions (what ChatGPT sees)
+    // Rendered image dimensions (what Claude sees)
     // Use natural image size, capped at 2048px
     const natW=activeImg.naturalWidth||activeImg.width||activeW;
     const natH=activeImg.naturalHeight||activeImg.height||activeH;
@@ -2825,7 +2825,8 @@ async function runKIAnalyse(){
     } else {
       ox.drawImage(activeImg,0,0,oc.width,oc.height);
     }
-    const b64=oc.toDataURL('image/jpeg',0.92).split(',')[1];
+    const imageData=oc.toDataURL('image/png');
+    const b64=imageData.split(',')[1];
 
     // Recalculate display dimensions fresh from current canvas size
     // This is the authoritative mapping: what fraction of canvas does the plan occupy?
@@ -2842,7 +2843,7 @@ async function runKIAnalyse(){
     console.log('KI mapping – recalculated:',Math.round(kiImgW),'x',Math.round(kiImgH),'offset:',Math.round(kiImgOX),Math.round(kiImgOY));
     console.log('KI – sent image:',oc.width,'x',oc.height,'| display:',Math.round(activeW),'x',Math.round(activeH),'| offset:',Math.round(activeOX),Math.round(activeOY),'| nat:',natW,'x',natH);
 
-    statusEl.textContent='ChatGPT analysiert den Plan...';
+    statusEl.textContent='Claude analysiert den Plan...';
 
     const prompt=viewMode==='schnitt'
       ?`Du analysierst einen Schnittplan (Querschnitt) eines Gebäudes für eine Aufmaß-App.
@@ -2888,10 +2889,8 @@ Antworte NUR mit diesem JSON (absolut kein Text davor oder danach, kein Markdown
         'Authorization':'Bearer '+SUPABASE_KEY
       },
       body:JSON.stringify({
-        imageBase64:b64,
-        prompt:prompt,
-        apiKey:getApiKey(),
-        model:'gpt-4.1'
+        image:imageData,
+        prompt:prompt
       })
     });
 
@@ -2907,40 +2906,13 @@ Antworte NUR mit diesem JSON (absolut kein Text davor oder danach, kein Markdown
     }
 
     const data=await resp.json();
-
-    // OpenAI/Proxy-Antwort robust auslesen:
-    // Je nach Responses-API/Proxy kann der eigentliche Text in output_text,
-    // output[].content[].text, choices[].message.content oder bereits direkt als JSON kommen.
-    function extractKIText(payload){
-      if(!payload)return '';
-      if(payload.ref&&payload.rooms)return JSON.stringify(payload);
-      const candidates=[];
-      const add=(v)=>{if(typeof v==='string'&&v.trim())candidates.push(v);};
-      const scan=(v)=>{
-        if(!v)return;
-        if(typeof v==='string'){add(v);return;}
-        if(Array.isArray(v)){v.forEach(scan);return;}
-        if(typeof v==='object'){
-          if(typeof v.output_text==='string')add(v.output_text);
-          if(typeof v.text==='string')add(v.text);
-          if(typeof v.content==='string')add(v.content);
-          if(v.message)scan(v.message);
-          if(v.content)scan(v.content);
-          if(v.output)scan(v.output);
-          if(v.choices)scan(v.choices);
-          if(v.data)scan(v.data);
-        }
-      };
-      scan(payload);
-      return candidates.find(s=>s.includes('"rooms"')||s.includes('"ref"')) || candidates[0] || '';
+    console.log('KI full response:',data);
+    if(data.error){
+      statusEl.textContent='Fehler: '+data.error;
+      console.error('KI backend error:',data);
+      return;
     }
-
-    let raw=extractKIText(data);
-    if(typeof raw!=='string')raw=String(raw||'');
-    raw=raw.replace(/```json|```/g,'').trim();
-    const firstBrace=raw.indexOf('{'), lastBrace=raw.lastIndexOf('}');
-    if(firstBrace>=0&&lastBrace>firstBrace)raw=raw.slice(firstBrace,lastBrace+1);
-
+    const raw=(data.text||'').trim().replace(/```json|```/g,'').trim();
     let parsed;
     try{parsed=JSON.parse(raw);}
     catch(e){statusEl.textContent='KI-Antwort konnte nicht gelesen werden. Bitte erneut versuchen.';console.error('KI parse error raw:',raw);console.error('KI full response:',data);return;}
@@ -2965,7 +2937,7 @@ Antworte NUR mit diesem JSON (absolut kein Text davor oder danach, kein Markdown
     // ── REF verarbeiten ──
     if(parsed.ref&&parsed.ref.p1&&parsed.ref.p2&&parsed.ref.lengthM){
       const r=parsed.ref;
-      // kiImgW/H/OX/OY are set above – ChatGPT coords map directly to canvas coords
+      // kiImgW/H/OX/OY are set above – Claude coords map directly to canvas coords
       const p1={x:kiImgOX+r.p1[0]*kiImgW, y:kiImgOY+r.p1[1]*kiImgH};
       const p2={x:kiImgOX+r.p2[0]*kiImgW, y:kiImgOY+r.p2[1]*kiImgH};
       kiResults.ref={pts:[p1,p2],lengthM:r.lengthM,confidence:r.confidence};
