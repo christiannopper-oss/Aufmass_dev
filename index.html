@@ -2794,60 +2794,53 @@ async function runKIAnalyse(){
     const activeImg=viewMode==='schnitt'?schnittImg:img;
     if(!activeImg){statusEl.textContent='Kein Plan geladen.';return;}
 
-    // Draw current plan to offscreen canvas for base64
-    // ── KI Image Rendering ──
-    // We render the image at a fixed resolution for Claude.
-    // Claude returns coords [0..1] relative to the rendered image.
-    // We map back: canvasCoord = imgOffset + relCoord * imgDisplaySize
-    const activeW=viewMode==='schnitt'?schnittW:imgW;
-    const activeH=viewMode==='schnitt'?schnittH:imgH;
-    const activeOX=viewMode==='schnitt'?schnittX:imgX;
-    const activeOY=viewMode==='schnitt'?schnittY:imgY;
+    // Render the full canvas view (at zoom=1, pan=0) so KI coords map 1:1 to canvas pixels.
+    // KI gibt [0..1] zurück → canvasX = rx * renderW, canvasY = ry * renderH
     const rot=viewMode==='schnitt'?imgRotationSchnitt:imgRotationGrundriss;
     const odd=rot===90||rot===270;
+    const natW=activeImg.naturalWidth||activeImg.width;
+    const natH=activeImg.naturalHeight||activeImg.height;
 
-    // Rendered image dimensions (what Claude sees)
-    // Use natural image size, capped at 2048px
-    const natW=activeImg.naturalWidth||activeImg.width||activeW;
-    const natH=activeImg.naturalHeight||activeImg.height||activeH;
-    const dispSrcW=odd?natH:natW;
-    const dispSrcH=odd?natW:natH;
-    const cap=2048;
-    const ks=Math.min(1,cap/Math.max(dispSrcW,dispSrcH));
+    // Use actual wrap dimensions for rendering
+    const _wr=wrap.getBoundingClientRect();
+    const renderW=Math.max(Math.round(_wr.width),400);
+    const renderH=Math.max(Math.round(_wr.height),400);
     const oc=document.createElement('canvas');
-    oc.width=Math.round(dispSrcW*ks);
-    oc.height=Math.round(dispSrcH*ks);
+    oc.width=renderW; oc.height=renderH;
     const ox=oc.getContext('2d');
+    ox.fillStyle='#e6e2da'; ox.fillRect(0,0,renderW,renderH);
+
+    // Fit image into canvas exactly as the app does at zoom=1
+    const _srcW=odd?natH:natW, _srcH=odd?natW:natH;
+    const _fit=Math.min(renderW/_srcW, renderH/_srcH);
+    const _dW=_srcW*_fit, _dH=_srcH*_fit;
+    const _dX=(renderW-_dW)/2, _dY=(renderH-_dH)/2;
     if(rot){
-      ox.translate(oc.width/2,oc.height/2);
+      ox.save();
+      ox.translate(_dX+_dW/2,_dY+_dH/2);
       ox.rotate(rot*Math.PI/180);
-      ox.drawImage(activeImg,-natW/2*ks,-natH/2*ks,natW*ks,natH*ks);
+      ox.drawImage(activeImg,-natW*_fit/2,-natH*_fit/2,natW*_fit,natH*_fit);
+      ox.restore();
     } else {
-      ox.drawImage(activeImg,0,0,oc.width,oc.height);
+      ox.drawImage(activeImg,_dX,_dY,_dW,_dH);
     }
-    const imageData=oc.toDataURL('image/png');
+    const imageData=oc.toDataURL('image/jpeg',0.92);
     const b64=imageData.split(',')[1];
 
-    // WICHTIG: Die KI sieht NUR diesen reinen Plan-Ausschnitt (oc).
-    // Wir berechnen den Plan-Frame neu aus der nativen Bildgröße + aktuellem Wrap,
-    // unabhängig von Zoom/Pan/Sidebar-Größe:
-    const _wr=wrap.getBoundingClientRect();
-    const _nW=natW, _nH=natH;
-    const _srcW=odd?_nH:_nW, _srcH=odd?_nW:_nH;
-    const _fit=Math.min(_wr.width/_srcW, _wr.height/_srcH);
-    const kiImgW=_srcW*_fit;
-    const kiImgH=_srcH*_fit;
-    const kiImgOX=(_wr.width-kiImgW)/2;
-    const kiImgOY=(_wr.height-kiImgH)/2;
-    console.log('KI mapping – PLAN FRAME:',Math.round(kiImgW),'x',Math.round(kiImgH),'offset:',Math.round(kiImgOX),Math.round(kiImgOY));
-    console.log('KI – sent plan crop:',oc.width,'x',oc.height,'| display frame:',Math.round(activeW),'x',Math.round(activeH),'| offset:',Math.round(activeOX),Math.round(activeOY),'| nat:',natW,'x',natH);
+    // MAPPING: KI [0..1] × renderW/H = direkte Canvas-Pixel-Koordinaten
+    // kein Offset nötig weil KI das gesamte Canvas sieht
+    const kiImgW=renderW;
+    const kiImgH=renderH;
+    const kiImgOX=0;
+    const kiImgOY=0;
+    console.log('KI – canvas render:',renderW,'x',renderH,'| plan fits at:',Math.round(_dX),Math.round(_dY),Math.round(_dW),'x',Math.round(_dH));
 
     statusEl.textContent='ChatGPT analysiert den reinen Plan-Ausschnitt...';
 
     const prompt=viewMode==='schnitt'
       ?`Du analysierst einen Schnittplan (Querschnitt) eines Gebäudes für eine Aufmaß-App.
 
-KOORDINATENSYSTEM: Du siehst nur den reinen Plan-Ausschnitt ohne App-Canvas. Bildgröße = 1.0 × 1.0. Punkt [0,0] = oben links des zugeschnittenen Planbildes, [1,0] = oben rechts, [0,1] = unten links, [1,1] = unten rechts.
+KOORDINATENSYSTEM: Das Bild zeigt den Plan mit grauem Rand. Punkt [0,0] = oben links des gesamten Bildes, [1,1] = unten rechts. Alle Koordinaten beziehen sich auf das GESAMTE Bild inkl. Rand.
 
 Erkenne:
 1. REF: Suche die längste Maßkette oder Maßlinie mit einem klar lesbaren Meterwert. Die zwei Punkte sind die exakten Endpunkte der Maßlinie (die Pfeilspitzen oder Begrenzungsstriche). Gib ihre relativen Positionen im Bild an.
@@ -2860,7 +2853,7 @@ Antworte NUR mit diesem JSON (kein Text davor oder danach, kein Markdown):
 }`
       :`Du analysierst einen Grundrissplan für eine Aufmaß-App. Sei sehr präzise bei den Koordinaten.
 
-KOORDINATENSYSTEM: Du siehst nur den reinen Plan-Ausschnitt ohne App-Canvas. Bildgröße = 1.0 × 1.0. Punkt [0,0] = oben links des zugeschnittenen Planbildes, [1,0] = oben rechts, [0,1] = unten links, [1,1] = unten rechts. Alle Koordinaten sind Verhältnisse zur Bildgröße.
+KOORDINATENSYSTEM: Das Bild zeigt den kompletten Plan mit grauem Rand drumherum. Bildgröße = 1.0 × 1.0. Punkt [0,0] = oben links des GESAMTEN Bildes (inkl. grauer Rand), [1,1] = unten rechts. Alle Koordinaten sind Verhältnisse zur GESAMTEN Bildgröße – also auch der Rand zählt mit.
 
 SCHRITT 1 - REF: Suche die längste Maßlinie oder Maßkette mit einem klar lesbaren Meterwert (z.B. "10.00m" oder "5.00"). Die Punkte p1 und p2 sind die exakten Endpunkte dieser Maßlinie (Pfeilspitzen). Bevorzuge horizontale Maßketten am oberen oder unteren Bildrand.
 
