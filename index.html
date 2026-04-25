@@ -2824,11 +2824,19 @@ async function runKIAnalyse(){
     }
     const b64=oc.toDataURL('image/jpeg',0.92).split(',')[1];
 
-    // Use stored display dimensions from when image was loaded (not current resize state)
-    const kiImgW = activeImg._kiRatioX || activeW;
-    const kiImgH = activeImg._kiRatioY || activeH;
-    const kiImgOX= activeImg._kiOffX   !== undefined ? activeImg._kiOffX : activeOX;
-    const kiImgOY= activeImg._kiOffY   !== undefined ? activeImg._kiOffY : activeOY;
+    // Recalculate display dimensions fresh from current canvas size
+    // This is the authoritative mapping: what fraction of canvas does the plan occupy?
+    const _r=wrap.getBoundingClientRect();
+    const _natW=activeImg.naturalWidth||activeImg.width;
+    const _natH=activeImg.naturalHeight||activeImg.height;
+    const _rot=rot; const _odd=odd;
+    const _srcW=_odd?_natH:_natW, _srcH=_odd?_natW:_natH;
+    const _ratio=Math.min((_r.width-40)/_srcW,(_r.height-40)/_srcH);
+    const kiImgW=_srcW*_ratio;
+    const kiImgH=_srcH*_ratio;
+    const kiImgOX=(_r.width-kiImgW)/2;
+    const kiImgOY=(_r.height-kiImgH)/2;
+    console.log('KI mapping – recalculated:',Math.round(kiImgW),'x',Math.round(kiImgH),'offset:',Math.round(kiImgOX),Math.round(kiImgOY));
     console.log('KI – sent image:',oc.width,'x',oc.height,'| display:',Math.round(activeW),'x',Math.round(activeH),'| offset:',Math.round(activeOX),Math.round(activeOY),'| nat:',natW,'x',natH);
 
     statusEl.textContent='Claude analysiert den Plan...';
