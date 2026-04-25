@@ -159,6 +159,27 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 .exp-check-row:hover{background:var(--bg3)}
 .exp-check-row input[type=checkbox]{accent-color:var(--gold);width:auto;margin:0;flex-shrink:0}
 .exp-check-row span{flex:1}
+/* KI Analyse Overlay */
+#ki-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+#ki-modal{background:var(--bg2);border-radius:14px;padding:28px;width:min(600px,94vw);max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:16px}
+#ki-modal h3{font-size:15px;font-weight:700;color:var(--txt);display:flex;align-items:center;gap:8px}
+.ki-badge{font-size:10px;padding:2px 8px;border-radius:20px;background:linear-gradient(135deg,#6e3ff3,#2a7ab8);color:#fff;font-weight:600}
+.ki-status{font-size:12px;color:var(--txt2);padding:10px 14px;background:var(--bg3);border-radius:var(--radius);min-height:40px;line-height:1.8}
+.ki-ref-preview{padding:12px 14px;background:#f0fdf4;border:1px solid #86efac;border-radius:var(--radius);font-size:12px;color:#166534}
+.ki-room-card{border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;position:relative;transition:border-color .15s}
+.ki-room-card.accepted{border-color:#86efac;background:#f0fdf4}
+.ki-room-card.skipped{border-color:var(--border);opacity:.45}
+.ki-room-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.ki-room-name{font-weight:600;font-size:13px;color:var(--txt)}
+.ki-room-pts{font-size:10px;color:var(--txt3);font-family:'DM Mono',monospace}
+.ki-room-actions{display:flex;gap:6px}
+.ki-accept{padding:5px 12px;background:var(--green);color:#fff;border:none;border-radius:var(--radius);font-family:inherit;font-size:11px;font-weight:600;cursor:pointer}
+.ki-skip{padding:5px 10px;background:transparent;color:var(--txt3);border:1px solid var(--border2);border-radius:var(--radius);font-family:inherit;font-size:11px;cursor:pointer}
+.ki-accept:hover{background:#22b05a}.ki-skip:hover{background:var(--bg3)}
+.ki-footer{display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--border)}
+/* API Key Modal */
+#ki-apikey-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:700;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+#ki-apikey-modal{background:var(--bg2);border-radius:14px;padding:28px;width:min(420px,94vw);box-shadow:var(--shadow-lg)}
 .save-indicator{position:fixed;bottom:20px;right:20px;background:rgba(26,138,68,.1);border:1px solid rgba(26,138,68,.4);color:var(--green);padding:6px 14px;border-radius:var(--radius);font-size:10px;font-family:'DM Mono',monospace;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999}
 .save-indicator.show{opacity:1}
 </style>
@@ -211,6 +232,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
       <button class="tbtn" id="btn-gdr" onclick="setView('grundriss')" style="display:none">📐 Grundriss</button>
       <button class="tbtn" id="btn-sch" onclick="setView('schnitt')" style="display:none">✂ Schnitt</button>
       <div class="spacer"></div>
+      <button class="tbtn" id="btn-ki" onclick="startKIAnalyse()" style="display:none;background:linear-gradient(135deg,#6e3ff3,#2a7ab8);color:#fff;border-color:#6e3ff3;font-weight:600">✦ KI-Erkennung</button>
       <button class="tbtn export" onclick="openExportModal()" id="btn-export" style="display:none">↓ PDF Export</button>
     </div>
     <!-- Zeile 2: Werkzeuge -->
@@ -2705,6 +2727,269 @@ function updToolbarLockState(){
   });
   // Ref-confirm and draw buttons are contextual, not locked here
 }
+
+// ── KI-ERKENNUNG ────────────────────────────────────────────
+let kiResults=null; // {ref:{pts,lengthM}, rooms:[{name,points,accepted}]}
+
+function getApiKey(){return localStorage.getItem('anthropic_api_key')||'';}
+function saveApiKey(){
+  const k=document.getElementById('ki-apikey-input').value.trim();
+  if(!k.startsWith('sk-ant-')){alert('Ungültiger API-Key. Muss mit sk-ant- beginnen.');return;}
+  localStorage.setItem('anthropic_api_key',k);
+  document.getElementById('ki-apikey-overlay').style.display='none';
+  runKIAnalyse();
+}
+
+function startKIAnalyse(){
+  if(!img&&!schnittImg){alert('Bitte zuerst einen Plan laden.');return;}
+  const key=getApiKey();
+  if(!key){
+    document.getElementById('ki-apikey-input').value='';
+    document.getElementById('ki-apikey-overlay').style.display='flex';
+    return;
+  }
+  runKIAnalyse();
+}
+
+async function runKIAnalyse(){
+  const overlay=document.getElementById('ki-overlay');
+  const statusEl=document.getElementById('ki-status');
+  const refSec=document.getElementById('ki-ref-section');
+  const roomsSec=document.getElementById('ki-rooms-section');
+  const footer=document.getElementById('ki-footer');
+  refSec.style.display='none';roomsSec.style.display='none';footer.style.display='none';
+  document.getElementById('ki-rooms-list').innerHTML='';
+  document.getElementById('ki-ref-preview').innerHTML='';
+  kiResults=null;
+  overlay.style.display='flex';
+  statusEl.textContent='Plan wird vorbereitet...';
+
+  try{
+    // Get plan as base64 image
+    const activeImg=viewMode==='schnitt'?schnittImg:img;
+    if(!activeImg){statusEl.textContent='Kein Plan geladen.';return;}
+
+    // Draw current plan to offscreen canvas for base64
+    const oc=document.createElement('canvas');
+    const activeW=viewMode==='schnitt'?schnittW:imgW;
+    const activeH=viewMode==='schnitt'?schnittH:imgH;
+    oc.width=Math.round(activeW*2);oc.height=Math.round(activeH*2);
+    const ox=oc.getContext('2d');
+    ox.scale(2,2);
+    const rot=viewMode==='schnitt'?imgRotationSchnitt:imgRotationGrundriss;
+    if(rot){
+      ox.translate(activeW/2,activeH/2);ox.rotate(rot*Math.PI/180);
+      const odd=rot===90||rot===270;
+      ox.drawImage(activeImg,odd?-activeH/2:-activeW/2,odd?-activeW/2:-activeH/2,
+        odd?activeH:activeW,odd?activeW:activeH);
+    } else {
+      ox.drawImage(activeImg,0,0,activeW,activeH);
+    }
+    const b64=oc.toDataURL('image/jpeg',0.85).split(',')[1];
+
+    statusEl.textContent='Claude analysiert den Plan...';
+
+    const prompt=viewMode==='schnitt'
+      ?`Du analysierst einen Schnittplan (Querschnitt) eines Gebäudes für eine Aufmaß-App.
+Erkenne:
+1. REF: Eine Maßkette, Maßlinie oder Maßstabsbalken mit einem konkreten Wert in Metern. Gib zwei Punkte (relativ zur Bildgröße, 0-1) und den Meterwert an.
+2. SCHNITT: Die Kontur des Dachquerschnitts als Polygon-Punkte (relativ zur Bildgröße, 0-1). Mindestens 5 Punkte: Boden links, Traufe links, First, Traufe rechts, Boden rechts.
+
+Antworte NUR mit diesem JSON (keine Erklärung):
+{
+  "ref": {"p1": [x1,y1], "p2": [x2,y2], "lengthM": 5.0, "confidence": "high"},
+  "schnitt": {"points": [[x,y],...], "confidence": "high"}
+}`
+      :`Du analysierst einen Grundrissplan für eine Aufmaß-App.
+Erkenne:
+1. REF: Die längste sichtbare Maßkette, Maßlinie oder einen Maßstabsbalken mit konkretem Meterwert. Gib zwei Endpunkte (relativ zur Bildgröße, 0-1) und den Meterwert an.
+2. RÄUME: Erkenne alle klar abgegrenzten Räume als Polygone. Pro Raum: Name (aus Beschriftung im Plan, sonst "Raum N"), Eckpunkte als relative Koordinaten (0-1).
+
+Antworte NUR mit diesem JSON (keine Erklärung, kein Markdown):
+{
+  "ref": {"p1": [x1,y1], "p2": [x2,y2], "lengthM": 5.0, "confidence": "high"},
+  "rooms": [
+    {"name": "Wohnzimmer", "points": [[x1,y1],[x2,y2],...], "confidence": "high"}
+  ]
+}`;
+
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':getApiKey(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-ipc':'true'},
+      body:JSON.stringify({
+        model:'claude-opus-4-5',
+        max_tokens:2000,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
+          {type:'text',text:prompt}
+        ]}]
+      })
+    });
+
+    if(!resp.ok){
+      const err=await resp.json();
+      if(err.error?.type==='authentication_error'){
+        localStorage.removeItem('anthropic_api_key');
+        statusEl.textContent='API-Key ungültig. Bitte neu eingeben.';
+        setTimeout(()=>{overlay.style.display='none';document.getElementById('ki-apikey-overlay').style.display='flex';},1500);
+        return;
+      }
+      throw new Error(err.error?.message||'API Fehler '+resp.status);
+    }
+
+    const data=await resp.json();
+    const raw=data.content[0].text.trim().replace(/```json|```/g,'').trim();
+    let parsed;
+    try{parsed=JSON.parse(raw);}
+    catch(e){statusEl.textContent='KI-Antwort konnte nicht gelesen werden. Bitte erneut versuchen.';console.error('KI parse error:',raw);return;}
+
+    kiResults={ref:null,rooms:[],schnitt:null};
+    statusEl.textContent='Analyse abgeschlossen.';
+
+    // ── REF verarbeiten ──
+    if(parsed.ref&&parsed.ref.p1&&parsed.ref.p2&&parsed.ref.lengthM){
+      const r=parsed.ref;
+      const cw=viewMode==='schnitt'?schnittW:imgW;
+      const ch=viewMode==='schnitt'?schnittH:imgH;
+      const ox2=viewMode==='schnitt'?schnittX:imgX;
+      const oy2=viewMode==='schnitt'?schnittY:imgY;
+      const p1={x:ox2+r.p1[0]*cw, y:oy2+r.p1[1]*ch};
+      const p2={x:ox2+r.p2[0]*cw, y:oy2+r.p2[1]*ch};
+      kiResults.ref={pts:[p1,p2],lengthM:r.lengthM,confidence:r.confidence};
+      refSec.style.display='';
+      document.getElementById('ki-ref-preview').innerHTML=
+        `Maß erkannt: <b>${r.lengthM} m</b> &nbsp;·&nbsp; Konfidenz: <b>${r.confidence}</b><br>
+         <span style="font-size:10px;opacity:.7">Die Ref-Punkte werden beim Übernehmen direkt gesetzt und kalibriert.</span>`;
+    }
+
+    // ── RÄUME verarbeiten (Grundriss) ──
+    if(parsed.rooms&&parsed.rooms.length>0){
+      const cw=imgW,ch=imgH,ox2=imgX,oy2=imgY;
+      kiResults.rooms=parsed.rooms.map((rm,i)=>({
+        name:rm.name||'Raum '+(i+1),
+        points:(rm.points||[]).map(([x,y])=>({x:ox2+x*cw,y:oy2+y*ch})),
+        confidence:rm.confidence||'medium',
+        accepted:true
+      }));
+      roomsSec.style.display='';
+      renderKIRooms();
+    }
+
+    // ── SCHNITT verarbeiten ──
+    if(parsed.schnitt&&parsed.schnitt.points){
+      const cw=schnittW,ch=schnittH,ox2=schnittX,oy2=schnittY;
+      kiResults.schnitt={
+        points:(parsed.schnitt.points||[]).map(([x,y])=>({x:ox2+x*cw,y:oy2+y*ch})),
+        confidence:parsed.schnitt.confidence||'medium',
+        accepted:true
+      };
+      // Show as single room-like card
+      roomsSec.style.display='';
+      document.getElementById('ki-rooms-list').innerHTML=`
+        <div class="ki-room-card accepted" id="ki-schnitt-card">
+          <div class="ki-room-header">
+            <div>
+              <div class="ki-room-name">Schnitt-Polygon</div>
+              <div class="ki-room-pts">${kiResults.schnitt.points.length} Punkte · Konfidenz: ${kiResults.schnitt.confidence}</div>
+            </div>
+            <div class="ki-room-actions">
+              <button class="ki-accept" onclick="toggleKISchnitt(true)">✓ Übernehmen</button>
+              <button class="ki-skip" onclick="toggleKISchnitt(false)">Überspringen</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    if(!kiResults.ref&&!kiResults.rooms.length&&!kiResults.schnitt){
+      statusEl.textContent='Keine verwertbaren Daten erkannt. Versuche einen Ausschnitt mit klaren Maßlinien und Raumgrenzen.';
+    } else {
+      footer.style.display='flex';
+    }
+
+  }catch(e){
+    statusEl.textContent='Fehler: '+e.message;
+    console.error('KI error:',e);
+  }
+}
+
+function renderKIRooms(){
+  const list=document.getElementById('ki-rooms-list');
+  if(!kiResults?.rooms?.length)return;
+  list.innerHTML=kiResults.rooms.map((rm,i)=>`
+    <div class="ki-room-card ${rm.accepted?'accepted':''}" id="ki-room-${i}">
+      <div class="ki-room-header">
+        <div>
+          <div class="ki-room-name">${rm.name}</div>
+          <div class="ki-room-pts">${rm.points.length} Punkte · Konfidenz: ${rm.confidence}</div>
+        </div>
+        <div class="ki-room-actions">
+          <button class="ki-accept" onclick="toggleKIRoom(${i},true)">✓ ${rm.accepted?'Übernommen':'Übernehmen'}</button>
+          <button class="ki-skip" onclick="toggleKIRoom(${i},false)">Überspringen</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function toggleKIRoom(i,accept){
+  if(!kiResults?.rooms[i])return;
+  kiResults.rooms[i].accepted=accept;
+  const card=document.getElementById('ki-room-'+i);
+  if(card){card.className='ki-room-card'+(accept?' accepted':' skipped');}
+  // preview on canvas
+  draw();
+}
+
+function toggleKISchnitt(accept){
+  if(!kiResults?.schnitt)return;
+  kiResults.schnitt.accepted=accept;
+  const card=document.getElementById('ki-schnitt-card');
+  if(card)card.className='ki-room-card'+(accept?' accepted':' skipped');
+}
+
+async function applyKIResults(){
+  if(!kiResults)return;
+  // ── Ref übernehmen ──
+  if(kiResults.ref){
+    const {pts,lengthM}=kiResults.ref;
+    refPts=[...pts];
+    if(viewMode==='schnitt'){refPtsSchnitt=[...pts];}
+    else{refPtsGrundriss=[...pts];}
+    // Kalibrieren
+    const dx=pts[1].x-pts[0].x,dy=pts[1].y-pts[0].y;
+    const pxLen=Math.hypot(dx,dy);
+    const sc=pxLen/lengthM;
+    if(viewMode==='schnitt'){scaleSchnitt=sc;refLengthSchnittM=lengthM;}
+    else{scaleGrundriss=sc;refLengthGrundrissM=lengthM;}
+    scale=sc;
+    refConfirmed=true;
+    await saveFloorState();
+  }
+  // ── Räume übernehmen ──
+  for(const rm of (kiResults.rooms||[])){
+    if(!rm.accepted||rm.points.length<3)continue;
+    const newRoom={name:rm.name,height:currentFloor?.default_height||2.5,points:rm.points,abzuege:[],zusaetze:[]};
+    rooms.push(newRoom);
+    await saveRoom(newRoom);
+  }
+  // ── Schnitt übernehmen ──
+  if(kiResults.schnitt?.accepted&&kiResults.schnitt.points.length>=5){
+    schnittPts=[...kiResults.schnitt.points];
+    schnittClosed=true;
+    schnittDrawMode=false;
+    // Auto-auswerten
+    confirmSchnitt();
+  }
+  closeKIOverlay();
+  updStatus();updSidebar();draw();scheduleSave();
+}
+
+function closeKIOverlay(){
+  document.getElementById('ki-overlay').style.display='none';
+  // Draw ki preview polygons on canvas while overlay open
+  kiResults=null;
+  draw();
+}
+
 // ── SCHNITT PARAM UPDATE ───────────────────────────────────
 function updSchnittParam(key,val){
   if(!currentFloor||!currentFloor.dach_config)return;
@@ -2716,5 +3001,39 @@ function updSchnittParam(key,val){
 // ── INIT ─────────────────────────────────────────────────
 showScreen('project');
 </script>
+<!-- KI API Key Modal -->
+<div id="ki-apikey-overlay">
+  <div id="ki-apikey-modal">
+    <h3 style="font-size:15px;font-weight:700;margin-bottom:6px">✦ KI-Erkennung einrichten</h3>
+    <p style="font-size:12px;color:var(--txt2);margin-bottom:16px;line-height:1.7">Gib deinen Anthropic API-Key ein. Er wird nur in diesem Browser gespeichert und nicht übertragen.</p>
+    <label style="font-size:10px;color:var(--txt3);letter-spacing:1px;font-weight:600;display:block;margin-bottom:5px">API KEY</label>
+    <input id="ki-apikey-input" type="password" placeholder="sk-ant-..." style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius);font-family:'DM Mono',monospace;font-size:12px;margin-bottom:14px;outline:none">
+    <p style="font-size:10px;color:var(--txt3);margin-bottom:14px">Zu finden unter <b>console.anthropic.com</b> → API Keys</p>
+    <div style="display:flex;gap:8px">
+      <button onclick="document.getElementById('ki-apikey-overlay').style.display='none'" style="flex:1;padding:9px;border:1px solid var(--border);border-radius:var(--radius);background:transparent;cursor:pointer;font-family:inherit;font-size:12px;color:var(--txt2)">Abbrechen</button>
+      <button onclick="saveApiKey()" style="flex:2;padding:9px;border:none;border-radius:var(--radius);background:var(--gold);cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;color:#fff">Speichern & starten</button>
+    </div>
+  </div>
+</div>
+
+<!-- KI Analyse Overlay -->
+<div id="ki-overlay">
+  <div id="ki-modal">
+    <h3>✦ KI-Erkennung <span class="ki-badge">Claude Vision</span></h3>
+    <div class="ki-status" id="ki-status">Analysiere Plan...</div>
+    <div id="ki-ref-section" style="display:none">
+      <div style="font-size:11px;font-weight:600;color:var(--txt2);margin-bottom:6px;letter-spacing:.5px">REFERENZPUNKT ERKANNT</div>
+      <div class="ki-ref-preview" id="ki-ref-preview"></div>
+    </div>
+    <div id="ki-rooms-section" style="display:none">
+      <div style="font-size:11px;font-weight:600;color:var(--txt2);margin-bottom:8px;letter-spacing:.5px">ERKANNTE RÄUME</div>
+      <div id="ki-rooms-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+    <div class="ki-footer" id="ki-footer" style="display:none">
+      <button onclick="closeKIOverlay()" style="padding:9px 18px;border:1px solid var(--border);border-radius:var(--radius);background:transparent;cursor:pointer;font-family:inherit;font-size:12px;color:var(--txt2)">Schließen</button>
+      <button id="ki-apply-btn" onclick="applyKIResults()" style="padding:9px 24px;border:none;border-radius:var(--radius);background:var(--gold);cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;color:#fff">✓ Auswahl übernehmen</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
