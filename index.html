@@ -233,6 +233,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
       <button class="tbtn" id="btn-sch" onclick="setView('schnitt')" style="display:none">✂ Schnitt</button>
       <div class="spacer"></div>
       <button class="tbtn" id="btn-ki" onclick="startKIAnalyse()" style="display:none;background:linear-gradient(135deg,#6e3ff3,#2a7ab8);color:#fff;border-color:#6e3ff3;font-weight:600">✦ KI-Erkennung</button>
+      <button class="tbtn" id="btn-json-import" onclick="openJsonImport()" style="display:none;border-color:#6e3ff3;color:#6e3ff3;font-weight:600">↓ JSON Import</button>
       <button class="tbtn export" onclick="openExportModal()" id="btn-export" style="display:none">↓ PDF Export</button>
     </div>
     <!-- Zeile 2: Werkzeuge -->
@@ -2745,9 +2746,11 @@ function updToolbarLockState(){
       const b=document.getElementById(id);if(b)b.classList.toggle('tb-locked',!hasPlan);
     });
   }
-  // KI-Button einblenden sobald Plan geladen
+  // KI + JSON Import Button einblenden sobald Plan geladen
   const kiBtn=document.getElementById('btn-ki');
   if(kiBtn)kiBtn.style.display=hasPlan?'':'none';
+  const jiBtn=document.getElementById('btn-json-import');
+  if(jiBtn)jiBtn.style.display=hasPlan?'':'none';
 }
 
 // ── KI-ERKENNUNG ────────────────────────────────────────────
@@ -3064,6 +3067,132 @@ function closeKIOverlay(){
   draw();
 }
 
+// ── JSON IMPORT ─────────────────────────────────────────────
+let _jsonImportParsed = null;
+
+function openJsonImport(){
+  document.getElementById('json-import-overlay').style.display='flex';
+  document.getElementById('json-import-input').value='';
+  document.getElementById('json-import-error').style.display='none';
+  document.getElementById('json-import-preview').style.display='none';
+  document.getElementById('json-import-apply').disabled=true;
+  document.getElementById('json-import-apply').style.opacity='.4';
+  _jsonImportParsed=null;
+  setTimeout(()=>document.getElementById('json-import-input').focus(),50);
+}
+
+function closeJsonImport(){
+  document.getElementById('json-import-overlay').style.display='none';
+  _jsonImportParsed=null;
+}
+
+function previewJsonImport(){
+  const errEl=document.getElementById('json-import-error');
+  const preEl=document.getElementById('json-import-preview');
+  const applyBtn=document.getElementById('json-import-apply');
+  errEl.style.display='none';
+  preEl.style.display='none';
+  applyBtn.disabled=true;
+  applyBtn.style.opacity='.4';
+  _jsonImportParsed=null;
+
+  const raw=document.getElementById('json-import-input').value.trim();
+  if(!raw){errEl.textContent='Kein JSON eingefügt.';errEl.style.display='';return;}
+
+  let parsed;
+  try{parsed=JSON.parse(raw);}
+  catch(e){errEl.textContent='Ungültiges JSON: '+e.message;errEl.style.display='';return;}
+
+  // Validate structure
+  const hasRef=parsed.ref&&Array.isArray(parsed.ref.p1)&&Array.isArray(parsed.ref.p2)&&parsed.ref.lengthM>0;
+  const rooms=parsed.rooms||[];
+  const validRooms=rooms.filter(r=>r.name&&Array.isArray(r.points)&&r.points.length>=3);
+
+  if(!hasRef&&validRooms.length===0){
+    errEl.textContent='Kein gültiges Ref und keine gültigen Räume gefunden.';
+    errEl.style.display='';return;
+  }
+
+  // Show preview
+  let lines=[];
+  if(hasRef)lines.push(`✓ Referenzmaß: ${parsed.ref.lengthM} m erkannt`);
+  else lines.push('⚠ Kein Referenzmaß gefunden');
+  lines.push(`✓ ${validRooms.length} Räume erkannt: ${validRooms.map(r=>r.name).join(', ')}`);
+  if(rooms.length>validRooms.length)lines.push(`⚠ ${rooms.length-validRooms.length} Räume übersprungen (ungültige Punkte)`);
+
+  preEl.innerHTML=lines.join('<br>');
+  preEl.style.display='';
+  _jsonImportParsed={ref:hasRef?parsed.ref:null, rooms:validRooms};
+  applyBtn.disabled=false;
+  applyBtn.style.opacity='1';
+}
+
+async function applyJsonImport(){
+  if(!_jsonImportParsed)return;
+  if(!img&&!schnittImg){alert('Bitte zuerst einen Plan laden.');return;}
+
+  const {ref, rooms:importRooms}=_jsonImportParsed;
+
+  // ── Ref setzen ──
+  if(ref){
+    const cw=viewMode==='schnitt'?schnittW:imgW;
+    const ch=viewMode==='schnitt'?schnittH:imgH;
+    const ox=viewMode==='schnitt'?schnittX:imgX;
+    const oy=viewMode==='schnitt'?schnittY:imgY;
+    // Recalculate display dimensions fresh (same as KI)
+    const _r=wrap.getBoundingClientRect();
+    const activeImg2=viewMode==='schnitt'?schnittImg:img;
+    const _natW=activeImg2.naturalWidth||activeImg2.width;
+    const _natH=activeImg2.naturalHeight||activeImg2.height;
+    const _ratio=Math.min((_r.width-40)/_natW,(_r.height-40)/_natH);
+    const dW=_natW*_ratio, dH=_natH*_ratio;
+    const dX=(_r.width-dW)/2, dY=(_r.height-dH)/2;
+
+    const p1={x: dX + ref.p1[0]*dW, y: dY + ref.p1[1]*dH};
+    const p2={x: dX + ref.p2[0]*dW, y: dY + ref.p2[1]*dH};
+    refPts=[p1,p2];
+    if(viewMode==='schnitt'){refPtsSchnitt=[p1,p2];}
+    else{refPtsGrundriss=[p1,p2];}
+
+    // Kalibrieren
+    const pxLen=Math.hypot(p2.x-p1.x, p2.y-p1.y);
+    const sc=pxLen/ref.lengthM;
+    if(viewMode==='schnitt'){scaleSchnitt=sc;refLengthSchnittM=ref.lengthM;}
+    else{scaleGrundriss=sc;refLengthGrundrissM=ref.lengthM;}
+    scale=sc;
+    refConfirmed=true;
+    await saveFloorState();
+  }
+
+  // ── Räume setzen ──
+  const _r2=wrap.getBoundingClientRect();
+  const activeImg3=viewMode==='schnitt'?schnittImg:img;
+  const _natW2=activeImg3.naturalWidth||activeImg3.width;
+  const _natH2=activeImg3.naturalHeight||activeImg3.height;
+  const _ratio2=Math.min((_r2.width-40)/_natW2,(_r2.height-40)/_natH2);
+  const dW2=_natW2*_ratio2, dH2=_natH2*_ratio2;
+  const dX2=(_r2.width-dW2)/2, dY2=(_r2.height-dH2)/2;
+
+  for(const rm of importRooms){
+    const points=rm.points.map(([x,y])=>({
+      x: dX2 + x*dW2,
+      y: dY2 + y*dH2
+    }));
+    const newRoom={
+      name:rm.name,
+      height:currentFloor?.default_height||2.5,
+      points,
+      abzuege:[],
+      zusaetze:[]
+    };
+    rooms.push(newRoom);
+    await saveRoom(newRoom);
+  }
+
+  closeJsonImport();
+  updStatus();updSidebar();draw();scheduleSave();
+}
+
 // ── SCHNITT PARAM UPDATE ───────────────────────────────────
 function updSchnittParam(key,val){
   if(!currentFloor||!currentFloor.dach_config)return;
@@ -3075,6 +3204,25 @@ function updSchnittParam(key,val){
 // ── INIT ─────────────────────────────────────────────────
 showScreen('project');
 </script>
+<!-- JSON Import Modal -->
+<div id="json-import-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:600;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)">
+  <div style="background:var(--bg2);border-radius:14px;padding:28px;width:min(560px,94vw);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:14px">
+    <h3 style="font-size:15px;font-weight:700;color:var(--txt);display:flex;align-items:center;gap:8px">
+      ↓ JSON Import <span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#6e3ff322;color:#6e3ff3;font-weight:600">ChatGPT / Claude</span>
+    </h3>
+    <p style="font-size:12px;color:var(--txt2);line-height:1.6">Füge das JSON aus ChatGPT oder Claude ein. Ref und Räume werden automatisch gesetzt.</p>
+    <textarea id="json-import-input" placeholder='{ "ref": {...}, "rooms": [...] }' 
+      style="width:100%;height:180px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);font-family:'DM Mono',monospace;font-size:11px;color:var(--txt);background:var(--bg);resize:vertical;outline:none;line-height:1.6"></textarea>
+    <div id="json-import-error" style="font-size:11px;color:var(--red);display:none;padding:8px 12px;background:rgba(192,57,43,.08);border-radius:var(--radius)"></div>
+    <div id="json-import-preview" style="font-size:11px;color:var(--green);display:none;padding:8px 12px;background:rgba(26,138,68,.08);border-radius:var(--radius)"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="closeJsonImport()" style="padding:9px 18px;border:1px solid var(--border);border-radius:var(--radius);background:transparent;cursor:pointer;font-family:inherit;font-size:12px;color:var(--txt2)">Abbrechen</button>
+      <button onclick="previewJsonImport()" style="padding:9px 18px;border:1px solid #6e3ff3;border-radius:var(--radius);background:transparent;cursor:pointer;font-family:inherit;font-size:12px;color:#6e3ff3;font-weight:600">Prüfen</button>
+      <button id="json-import-apply" onclick="applyJsonImport()" disabled style="padding:9px 24px;border:none;border-radius:var(--radius);background:#6e3ff3;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;color:#fff;opacity:.4">✓ Übernehmen</button>
+    </div>
+  </div>
+</div>
+
 <!-- KI API Key Modal -->
 <div id="ki-apikey-overlay">
   <div id="ki-apikey-modal">
