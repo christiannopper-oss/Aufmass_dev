@@ -2790,12 +2790,17 @@ async function runKIAnalyse(){
     if(!activeImg){statusEl.textContent='Kein Plan geladen.';return;}
 
     // Draw current plan to offscreen canvas for base64
+    // Render plan at high resolution for better OCR and line detection
     const oc=document.createElement('canvas');
-    const activeW=viewMode==='schnitt'?schnittW:imgW;
-    const activeH=viewMode==='schnitt'?schnittH:imgH;
-    oc.width=Math.round(activeW*2);oc.height=Math.round(activeH*2);
+    const activeW=viewMode==='schnitt'?schnittImg.naturalWidth||schnittW:activeImg.naturalWidth||imgW;
+    const activeH=viewMode==='schnitt'?schnittImg.naturalHeight||schnittH:activeImg.naturalHeight||imgH;
+    // Cap at 2400px on longest side to stay within API limits
+    const maxDim=2400;
+    const scale2=Math.min(1,maxDim/Math.max(activeW,activeH));
+    oc.width=Math.round(activeW*scale2);
+    oc.height=Math.round(activeH*scale2);
     const ox=oc.getContext('2d');
-    ox.scale(2,2);
+    ox.scale(scale2,scale2);
     const rot=viewMode==='schnitt'?imgRotationSchnitt:imgRotationGrundriss;
     if(rot){
       ox.translate(activeW/2,activeH/2);ox.rotate(rot*Math.PI/180);
@@ -2805,31 +2810,41 @@ async function runKIAnalyse(){
     } else {
       ox.drawImage(activeImg,0,0,activeW,activeH);
     }
-    const b64=oc.toDataURL('image/jpeg',0.85).split(',')[1];
+    const b64=oc.toDataURL('image/jpeg',0.92).split(',')[1];
 
     statusEl.textContent='Claude analysiert den Plan...';
 
     const prompt=viewMode==='schnitt'
       ?`Du analysierst einen Schnittplan (Querschnitt) eines Gebäudes für eine Aufmaß-App.
-Erkenne:
-1. REF: Eine Maßkette, Maßlinie oder Maßstabsbalken mit einem konkreten Wert in Metern. Gib zwei Punkte (relativ zur Bildgröße, 0-1) und den Meterwert an.
-2. SCHNITT: Die Kontur des Dachquerschnitts als Polygon-Punkte (relativ zur Bildgröße, 0-1). Mindestens 5 Punkte: Boden links, Traufe links, First, Traufe rechts, Boden rechts.
 
-Antworte NUR mit diesem JSON (keine Erklärung):
+KOORDINATENSYSTEM: Bildgröße = 1.0 × 1.0. Punkt [0,0] = oben links, [1,0] = oben rechts, [0,1] = unten links, [1,1] = unten rechts.
+
+Erkenne:
+1. REF: Suche die längste Maßkette oder Maßlinie mit einem klar lesbaren Meterwert. Die zwei Punkte sind die exakten Endpunkte der Maßlinie (die Pfeilspitzen oder Begrenzungsstriche). Gib ihre relativen Positionen im Bild an.
+2. SCHNITT: Die äußere Kontur des Gebäudequerschnitts als Polygon. Gehe im Uhrzeigersinn vor: starte unten links, dann Traufe links, First (höchster Punkt), Traufe rechts, unten rechts. Sei präzise – die Punkte müssen auf den Wandlinien liegen.
+
+Antworte NUR mit diesem JSON (kein Text davor oder danach, kein Markdown):
 {
   "ref": {"p1": [x1,y1], "p2": [x2,y2], "lengthM": 5.0, "confidence": "high"},
   "schnitt": {"points": [[x,y],...], "confidence": "high"}
 }`
-      :`Du analysierst einen Grundrissplan für eine Aufmaß-App.
-Erkenne:
-1. REF: Die längste sichtbare Maßkette, Maßlinie oder einen Maßstabsbalken mit konkretem Meterwert. Gib zwei Endpunkte (relativ zur Bildgröße, 0-1) und den Meterwert an.
-2. RÄUME: Erkenne alle klar abgegrenzten Räume als Polygone. Pro Raum: Name (aus Beschriftung im Plan, sonst "Raum N"), Eckpunkte als relative Koordinaten (0-1).
+      :`Du analysierst einen Grundrissplan für eine Aufmaß-App. Sei sehr präzise bei den Koordinaten.
 
-Antworte NUR mit diesem JSON (keine Erklärung, kein Markdown):
+KOORDINATENSYSTEM: Bildgröße = 1.0 × 1.0. Punkt [0,0] = oben links, [1,0] = oben rechts, [0,1] = unten links, [1,1] = unten rechts. Alle Koordinaten sind Verhältnisse zur Bildgröße.
+
+SCHRITT 1 - REF: Suche die längste Maßlinie oder Maßkette mit einem klar lesbaren Meterwert (z.B. "10.00m" oder "5.00"). Die Punkte p1 und p2 sind die exakten Endpunkte dieser Maßlinie (Pfeilspitzen). Bevorzuge horizontale Maßketten am oberen oder unteren Bildrand.
+
+SCHRITT 2 - RÄUME: Erkenne jeden klar beschrifteten Raum. Für jeden Raum:
+- Lies den Raumnamen direkt aus der Planbeschriftung
+- Bestimme die 4 Eckpunkte des Raumes (oder mehr bei L-Form etc.) anhand der Wandlinien
+- Die Punkte müssen auf den tatsächlichen Wänden/Raumgrenzen liegen, nicht geschätzt
+- Gehe im Uhrzeigersinn vor, starte oben links
+
+Antworte NUR mit diesem JSON (absolut kein Text davor oder danach, kein Markdown, keine Erklärung):
 {
-  "ref": {"p1": [x1,y1], "p2": [x2,y2], "lengthM": 5.0, "confidence": "high"},
+  "ref": {"p1": [x1,y1], "p2": [x2,y2], "lengthM": 10.0, "confidence": "high"},
   "rooms": [
-    {"name": "Wohnzimmer", "points": [[x1,y1],[x2,y2],...], "confidence": "high"}
+    {"name": "Wohnzimmer", "points": [[x1,y1],[x2,y2],[x3,y3],[x4,y4]], "confidence": "high"}
   ]
 }`;
 
