@@ -400,7 +400,7 @@ let img=null,imgX=0,imgY=0,imgW=0,imgH=0;
 let zoom=1,panX=0,panY=0;
 let tool='select';
 let curPts=[],refPts=[];
-let snapInfo=null,mouseW=null;
+let snapInfo=null,mouseW=null,angleSnap=null; // angleSnap: {angle, type} or null
 let scale=null; // current active scale (alias)
 let scaleGrundriss=null; // scale for grundriss view
 let scaleSchnitt=null;   // scale for schnitt view
@@ -1582,6 +1582,49 @@ function draw(){
     curPts.forEach((p,i)=>{ctx.beginPath();ctx.arc(p.x,p.y,i===0?6/zoom:4/zoom,0,Math.PI*2);ctx.fillStyle=i===0?'#e74c3c':'#c8a96e';ctx.fill();});
     if(curPts.length>=3){const closing=sp&&isClosing(sp.x,sp.y);ctx.beginPath();ctx.arc(curPts[0].x,curPts[0].y,SNAP_CLOSE/zoom,0,Math.PI*2);ctx.strokeStyle=closing?'#e74c3c':'#e74c3c55';ctx.lineWidth=(closing?2.5:1.5)/zoom;ctx.stroke();if(closing){ctx.fillStyle='rgba(231,76,60,.1)';ctx.fill();}}
   }
+  // ── Angle snap visual hint ──
+  if(angleSnap&&tool==='draw'&&curPts.length>0){
+    const{x,y,fromX,fromY,label}=angleSnap;
+    const isOrthogonal=label==='90°';
+    const col=isOrthogonal?'#1a8a44':'#2a7ab8'; // grün=orthogonal, blau=diagonal
+    // Kleine quadratische Ecke als Rechtwinkelsymbol (bei 90°)
+    if(isOrthogonal){
+      const sz=10/zoom;
+      const dx=x-fromX, dy=y-fromY;
+      const len=Math.hypot(dx,dy);
+      if(len>0){
+        const ux=dx/len, uy=dy/len;
+        // Senkrechter Vektor
+        const px=-uy, py=ux;
+        const corner1x=x-ux*sz, corner1y=y-uy*sz;
+        const corner2x=corner1x+px*sz, corner2y=corner1y+py*sz;
+        const corner3x=x+px*sz, corner3y=y+py*sz;
+        ctx.beginPath();
+        ctx.moveTo(corner1x,corner1y);
+        ctx.lineTo(corner2x,corner2y);
+        ctx.lineTo(corner3x,corner3y);
+        ctx.strokeStyle=col+'cc';ctx.lineWidth=1.5/zoom;ctx.stroke();
+      }
+    }
+    // Winkel-Badge neben Mausposition
+    const fs=11/zoom;
+    ctx.font=`700 ${fs}px 'DM Sans',sans-serif`;
+    ctx.textAlign='left';
+    const tw=ctx.measureText(label).width;
+    const pad=4/zoom, bx=x+10/zoom, by=y-10/zoom;
+    ctx.fillStyle='rgba(255,255,255,0.92)';
+    ctx.beginPath();
+    ctx.roundRect(bx-pad,by-fs-pad*0.5,tw+pad*2,fs+pad*1.5,3/zoom);
+    ctx.fill();
+    ctx.fillStyle=col;
+    ctx.fillText(label,bx,by);
+    // Linie leicht einfärben
+    ctx.strokeStyle=col+'88';
+    ctx.lineWidth=1.5/zoom;
+    ctx.setLineDash([4/zoom,2/zoom]);
+    ctx.beginPath();ctx.moveTo(fromX,fromY);ctx.lineTo(x,y);
+    ctx.stroke();ctx.setLineDash([]);
+  }
   // ref points — draggable until confirmed
   // Always draw ref pts as persistent markers
   if(refPts.length>0){
@@ -2205,6 +2248,28 @@ cv.addEventListener('mousemove',e=>{
   if(isPanning){panX+=e.clientX-lastPX;panY+=e.clientY-lastPY;lastPX=e.clientX;lastPY=e.clientY;draw();updStatus();return;}
   const w=toW(e.clientX,e.clientY);mouseW=w;
   snapInfo=((tool==='draw'&&curPts.length>0)||tool==='ref')?getSnap(w.x,w.y):null;
+  // Angle snap hint: detect 0/45/90/135/180° from last point
+  angleSnap=null;
+  if(tool==='draw'&&curPts.length>0){
+    const last=curPts[curPts.length-1];
+    const sp=snapInfo||w;
+    const dx=sp.x-last.x, dy=sp.y-last.y;
+    const len=Math.hypot(dx,dy);
+    if(len>8/zoom){
+      const deg=((Math.atan2(dy,dx)*180/Math.PI)+360)%360;
+      // Check proximity to multiples of 45°
+      const targets=[0,45,90,135,180,225,270,315,360];
+      for(const t of targets){
+        const diff=Math.abs(deg-t);
+        if(diff<4){
+          // label: prefer 0/90/180/270 as orthogonal, rest as diagonal
+          const label=(t%90===0)?'90°':'45°';
+          angleSnap={angle:t,label,x:sp.x,y:sp.y,fromX:last.x,fromY:last.y};
+          break;
+        }
+      }
+    }
+  }
   hoverPt=hitPoint(w.x,w.y);hoverEdge=!hoverPt?hitEdge(w.x,w.y):null;
   const refHit=hitRefPoint(w.x,w.y);
   cv.style.cursor=refHit!==null?'grab':hoverPt?'grab':hoverEdge?'copy':tool==='draw'?'crosshair':tool==='ref'?'cell':'default';
