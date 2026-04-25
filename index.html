@@ -2887,7 +2887,16 @@ Antworte NUR mit diesem JSON (absolut kein Text davor oder danach, kein Markdown
     catch(e){statusEl.textContent='KI-Antwort konnte nicht gelesen werden. Bitte erneut versuchen.';console.error('KI parse error:',raw);return;}
 
     kiResults={ref:null,rooms:[],schnitt:null};
-    statusEl.textContent='Analyse abgeschlossen.';
+    // Debug: show mapping info and raw ref coords
+    console.log('KI Debug – Canvas mapping:',{kiImgW,kiImgH,kiImgOX,kiImgOY});
+    console.log('KI Debug – Raw response:',JSON.stringify(parsed,null,2));
+    if(parsed.ref){
+      const r=parsed.ref;
+      console.log('KI Debug – Ref raw coords:',r.p1,r.p2,'→ canvas:',
+        {x:kiImgOX+r.p1[0]*kiImgW, y:kiImgOY+r.p1[1]*kiImgH},
+        {x:kiImgOX+r.p2[0]*kiImgW, y:kiImgOY+r.p2[1]*kiImgH});
+    }
+    statusEl.innerHTML='Analyse abgeschlossen. <span style="font-size:10px;color:var(--txt3)">(Details in Browser-Konsole)</span>';
 
     // ── REF verarbeiten ──
     if(parsed.ref&&parsed.ref.p1&&parsed.ref.p2&&parsed.ref.lengthM){
