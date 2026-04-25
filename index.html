@@ -597,13 +597,19 @@ async function openFloor(id){
 
   // load rooms
   const rawRooms=await sb.get('rooms','?floor_id=eq.'+currentFloor.id+'&order=created_at.asc')||[];
-  rooms=rawRooms.map(rm=>({
-    ...rm,
-    pointsNorm:(rm.points||[]),
-    points:[],
-    traufKanten:rm.trauf_kanten||[],
-        traufSeiten:rm.trauf_seiten||{}
-  }));
+  rooms=rawRooms.map(rm=>{
+    // trauf_kanten may be old format (array of numbers) or new format (array of {idx,side})
+    const raw=rm.trauf_kanten||[];
+    let traufKanten=[],traufSeiten={};
+    raw.forEach(item=>{
+      if(typeof item==='number'){traufKanten.push(item);}
+      else if(item&&typeof item==='object'&&'idx' in item){
+        traufKanten.push(item.idx);
+        if(item.side)traufSeiten[item.idx]=item.side;
+      }
+    });
+    return {...rm,pointsNorm:(rm.points||[]),points:[],traufKanten,traufSeiten};
+  });
 
   // reset visible plans; restore after the app screen is visible
   img=null;imgX=0;imgY=0;imgW=0;imgH=0;
@@ -903,10 +909,13 @@ async function saveRoom(room){
   const normalizedPoints = normalizePtsForView(room.points||[],'grundriss');
   room.pointsNorm = normalizedPoints;
   if(!room.id){
-    const res=await sb.post('rooms',{floor_id:currentFloor.id,name:room.name,height:room.height,points:normalizedPoints,abzuege:room.abzuege||[],zusaetze:room.zusaetze||[],trauf_kanten:room.traufKanten||[],trauf_seiten:room.traufSeiten||{}});
+    // Encode traufSeiten into trauf_kanten as [{idx,side}] to avoid extra DB column
+  const traufKantenEncoded=(room.traufKanten||[]).map(idx=>({idx,side:(room.traufSeiten||{})[idx]||null}));
+  const res=await sb.post('rooms',{floor_id:currentFloor.id,name:room.name,height:room.height,points:normalizedPoints,abzuege:room.abzuege||[],zusaetze:room.zusaetze||[],trauf_kanten:traufKantenEncoded});
     if(res&&res[0])room.id=res[0].id;
   } else {
-    await sb.patch('rooms',{name:room.name,height:room.height,points:normalizedPoints,abzuege:room.abzuege||[],zusaetze:room.zusaetze||[],trauf_kanten:room.traufKanten||[],trauf_seiten:room.traufSeiten||{}},'?id=eq.'+room.id);
+    const traufKantenEncoded2=(room.traufKanten||[]).map(idx=>({idx,side:(room.traufSeiten||{})[idx]||null}));
+  await sb.patch('rooms',{name:room.name,height:room.height,points:normalizedPoints,abzuege:room.abzuege||[],zusaetze:room.zusaetze||[],trauf_kanten:traufKantenEncoded2},'?id=eq.'+room.id);
   }
   showSaveIndicator();
   syncDebugState();
@@ -1514,9 +1523,19 @@ function draw(){
         const col=side==='left'?'#2a7ab8':side==='right'?'#d4640a':'#e74c3c';
         const lbl=side==='left'?'◁ Traufe L':side==='right'?'▷ Traufe R':'Traufe ?';
         ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
-        ctx.strokeStyle=col;ctx.lineWidth=3.5/zoom;ctx.stroke();
+        ctx.strokeStyle=col;ctx.lineWidth=4/zoom;ctx.stroke();
         const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
-        ctx.font=`600 ${10/zoom}px monospace`;ctx.fillStyle=col;ctx.textAlign='center';
+        // Label mit weißem Hintergrund für bessere Lesbarkeit
+        const fs=13/zoom;
+        ctx.font=`700 ${fs}px 'DM Sans',sans-serif`;
+        ctx.textAlign='center';
+        const tw=ctx.measureText(lbl).width;
+        const pad=4/zoom,th=fs*1.2;
+        ctx.fillStyle='rgba(255,255,255,0.85)';
+        ctx.beginPath();
+        ctx.roundRect(mx-tw/2-pad,my-th-6/zoom,tw+pad*2,th+pad*1.5,3/zoom);
+        ctx.fill();
+        ctx.fillStyle=col;
         ctx.fillText(lbl,mx,my-7/zoom);
       });
     }
@@ -1714,10 +1733,23 @@ function updSidebar(){
         +((abzSum>0||zusSum>0)?'<br>Wand netto: <b class="net">'+wN.toFixed(2)+' m²</b>':'<br>Wand: <b class="net">'+(wN!==null?wN.toFixed(2):'?')+' m²</b>')
         +lmSection)
       :'<span style="color:#444">Kalibrierung fehlt</span>';
-    return`<div class="rc${sel?' sel':''}" onclick="selR(${i})"><div class="rn"><span>${rm.name}</span><div style="display:flex;gap:4px"><button class="edit-btn" onclick="openEditRoom(${i});event.stopPropagation()">✎</button><button class="edit-btn" style="border-color:#c0392b33;color:#c0392b" onclick="delRoomByIdx(${i});event.stopPropagation()">✕</button></div></div>
-    <div class="rs">Höhe: <b>${rm.height.toFixed(2)} m</b><br>${mainStats}</div>
-    <div class="entry-list">${abzHtml}${zusHtml}</div>
-    <div class="add-row"><button onclick="openEntry(${i},'abzug');event.stopPropagation()">− Abzug</button><button onclick="openEntry(${i},'zusatz');event.stopPropagation()">+ Zusatzfläche</button></div></div>`;
+    // Kompakte Vorschau: nur Wand netto + Grundfläche
+    const preview=a!==null
+      ?`<span style="font-size:10px;color:var(--txt3)">${a.toFixed(2)} m² &nbsp;·&nbsp; <span style="color:var(--blue)">${wN!==null?wN.toFixed(2):'?'} m² netto</span></span>`
+      :`<span style="font-size:10px;color:var(--txt3);opacity:.6">Kalibrierung fehlt</span>`;
+    return`<div class="rc${sel?' sel':''}" onclick="selR(${i})">
+      <div class="rn"><span>${rm.name}</span><div style="display:flex;gap:4px">
+        <button class="edit-btn" onclick="openEditRoom(${i});event.stopPropagation()">✎</button>
+        <button class="edit-btn" style="border-color:#c0392b33;color:#c0392b" onclick="delRoomByIdx(${i});event.stopPropagation()">✕</button>
+      </div></div>
+      ${!sel?`<div style="margin-top:2px">${preview}</div>`:`
+      <div class="rs" style="margin-top:6px">Höhe: <b>${rm.height.toFixed(2)} m</b><br>${mainStats}</div>
+      <div class="entry-list">${abzHtml}${zusHtml}</div>
+      <div class="add-row">
+        <button onclick="openEntry(${i},'abzug');event.stopPropagation()">− Abzug</button>
+        <button onclick="openEntry(${i},'zusatz');event.stopPropagation()">+ Zusatzfläche</button>
+      </div>`}
+    </div>`;
   }).join('');
 
   list.innerHTML = refCard + roomHtml;
@@ -1807,6 +1839,8 @@ function centerModal(id){const wr=wrap.getBoundingClientRect();const mw=document
 function openRoomModal(){
   if(curPts.length<3)return;
   editRoomIdx=null;pendingPts=[...curPts];
+  // Deactivate draw tool while modal is open so no stray points are placed
+  tool='none';
   document.getElementById('room-modal-title').textContent='Raum erfassen';
   document.getElementById('m-name').value='';
   document.getElementById('m-ok').disabled=false;
