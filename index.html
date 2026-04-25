@@ -2835,47 +2835,47 @@ async function runKIAnalyse(){
     const kiImgOY=0;
     console.log('KI – canvas render:',renderW,'x',renderH,'| plan fits at:',Math.round(_dX),Math.round(_dY),Math.round(_dW),'x',Math.round(_dH));
 
-    statusEl.textContent='ChatGPT analysiert den reinen Plan-Ausschnitt...';
+    // Calculate plan boundaries as fractions of the rendered canvas
+    // These tell the KI exactly where the plan is within the image
+    const planX1=(_dX/renderW).toFixed(3);
+    const planY1=(_dY/renderH).toFixed(3);
+    const planX2=((_dX+_dW)/renderW).toFixed(3);
+    const planY2=((_dY+_dH)/renderH).toFixed(3);
+    console.log('KI – plan bounds in image:',planX1,planY1,'→',planX2,planY2);
+
+    statusEl.textContent='ChatGPT analysiert den Plan...';
 
     const prompt=viewMode==='schnitt'
       ?`Du analysierst einen Schnittplan (Querschnitt) eines Gebäudes für eine Aufmaß-App.
 
-KOORDINATENSYSTEM: Das Bild zeigt den Plan mit grauem Rand. Punkt [0,0] = oben links des gesamten Bildes, [1,1] = unten rechts. Alle Koordinaten beziehen sich auf das GESAMTE Bild inkl. Rand.
+KOORDINATENSYSTEM: Bildgröße = 1.0 × 1.0. [0,0] = oben links, [1,1] = unten rechts.
+Der Plan liegt im Bild bei X: ${planX1} bis ${planX2}, Y: ${planY1} bis ${planY2}.
+Der graue Bereich außerhalb ist Rand – Koordinaten müssen INNERHALB der Plan-Grenzen liegen.
 
 Erkenne:
-1. REF: Suche die längste Maßkette oder Maßlinie mit einem klar lesbaren Meterwert. Die zwei Punkte sind die exakten Endpunkte der Maßlinie (die Pfeilspitzen oder Begrenzungsstriche). Gib ihre relativen Positionen im Bild an.
-2. SCHNITT: Die äußere Kontur des Gebäudequerschnitts als Polygon. Gehe im Uhrzeigersinn vor: starte unten links, dann Traufe links, First (höchster Punkt), Traufe rechts, unten rechts. Sei präzise – die Punkte müssen auf den Wandlinien liegen.
+1. REF: Die längste Maßkette außerhalb des Grundrisses mit lesbarem Meterwert. p1/p2 = exakte Endpunkte der Maßlinie.
+2. SCHNITT: Außenkontur des Querschnitts. Uhrzeigersinn: unten-links → Traufe-links → First → Traufe-rechts → unten-rechts.
 
-Antworte NUR mit diesem JSON (kein Text davor oder danach, kein Markdown):
-{
-  "ref": {"p1": [x1,y1], "p2": [x2,y2], "lengthM": 5.0, "confidence": "high"},
-  "schnitt": {"points": [[x,y],...], "confidence": "high"}
-}`
-      :`Du analysierst einen Grundrissplan für eine Aufmaß-App. Sei sehr präzise bei den Koordinaten.
+Antworte NUR mit JSON:
+{"ref":{"p1":[x,y],"p2":[x,y],"lengthM":5.0},"schnitt":{"points":[[x,y],...]}}`
+      :`Du analysierst einen Grundrissplan für eine Aufmaß-App.
 
-KOORDINATENSYSTEM: Das Bild zeigt den kompletten Plan mit grauem Rand drumherum. Bildgröße = 1.0 × 1.0. Punkt [0,0] = oben links des GESAMTEN Bildes (inkl. grauer Rand), [1,1] = unten rechts. Alle Koordinaten sind Verhältnisse zur GESAMTEN Bildgröße – also auch der Rand zählt mit.
+KOORDINATENSYSTEM: Bildgröße = 1.0 × 1.0. [0,0] = oben links des gesamten Bildes, [1,1] = unten rechts.
+WICHTIG: Der Plan liegt im Bild bei X: ${planX1} bis ${planX2}, Y: ${planY1} bis ${planY2}.
+Alle Raum-Koordinaten MÜSSEN in diesem Bereich liegen. Koordinaten außerhalb sind falsch.
 
-SCHRITT 1 - REF: Suche die längste Maßlinie oder Maßkette mit einem klar lesbaren Meterwert (z.B. "10.00m" oder "5.00"). Die Punkte p1 und p2 sind die exakten Endpunkte dieser Maßlinie (Pfeilspitzen). Bevorzuge horizontale Maßketten am oberen oder unteren Bildrand.
+REFERENZ: Suche Maßketten (Linien mit Pfeilspitzen + Meterwert) außerhalb des Grundrisses.
+p1/p2 = die äußersten Endpunkte der Maßlinie (Pfeilspitzen), nicht die Zahl selbst.
+Bevorzuge die längste horizontale Maßkette.
 
-SCHRITT 2 - RÄUME: Erkenne NUR Räume die explizit mit einem Namen beschriftet sind.
-WICHTIG: Erfinde keine Räume. Wenn kein Name lesbar ist, überspringe den Bereich.
-Für jeden beschrifteten Raum:
-- Raumnamen EXAKT aus der Planbeschriftung übernehmen (z.B. "Kind 1", "Eltern", "Bad")
-- Wandlinien präzise verfolgen, Eckpunkte genau an Wandkreuzungen setzen
-- Koordinaten relativ zum Bild: [0,0] = oben-links, [1,1] = unten-rechts
-- Uhrzeigersinn, Start oben-links des Raumes
-- Rechteckige Räume = genau 4 Punkte, L-Form = mehr Punkte
-- Treppe, Aufzug, Schacht = NICHT aufführen
+RÄUME: Nur explizit beschriftete Räume. Keine Erfindungen.
+- Name EXAKT aus Planbeschriftung
+- Eckpunkte auf Wandlinien, Uhrzeigersinn, oben-links zuerst
+- Rechteck = 4 Punkte, L-Form = mehr Punkte
+- Treppe/Schacht = NICHT aufführen
 
-WICHTIG für REF: Suche außerhalb des Grundrisses nach Maßketten (Linien mit Pfeilspitzen und einer Zahl in Metern). Bevorzuge die längste durchgehende Maßkette – typisch am oberen oder linken Bildrand. p1 und p2 sind die äußeren Endpunkte dieser Maßkette (die Begrenzungsstriche oder Pfeilspitzen), nicht die Beschriftung selbst.
-
-Antworte NUR mit diesem JSON (absolut kein Text davor oder danach, kein Markdown, keine Erklärung):
-{
-  "ref": {"p1": [x1,y1], "p2": [x2,y2], "lengthM": 10.0, "confidence": "high"},
-  "rooms": [
-    {"name": "Wohnzimmer", "points": [[x1,y1],[x2,y2],[x3,y3],[x4,y4]], "confidence": "high"}
-  ]
-}`;
+Antworte NUR mit JSON, kein Text davor/danach:
+{"ref":{"p1":[x,y],"p2":[x,y],"lengthM":10.0},"rooms":[{"name":"Eltern","points":[[x,y],[x,y],[x,y],[x,y]]}]}`;
 
     const resp=await fetch(`${SUPABASE_URL}/functions/v1/openai-proxy`,{
       method:'POST',
