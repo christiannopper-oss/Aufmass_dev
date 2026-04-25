@@ -2791,16 +2791,19 @@ async function runKIAnalyse(){
 
     // Draw current plan to offscreen canvas for base64
     // Render plan at high resolution for better OCR and line detection
+    // IMPORTANT: use canvas display dimensions so coordinate mapping stays 1:1
+    const activeW=viewMode==='schnitt'?schnittW:imgW;
+    const activeH=viewMode==='schnitt'?schnittH:imgH;
+    const activeOX=viewMode==='schnitt'?schnittX:imgX;
+    const activeOY=viewMode==='schnitt'?schnittY:imgY;
+    // Upscale for readability but remember the scale factor for coord mapping
+    const maxDim=2048;
+    const upScale=Math.min(3,maxDim/Math.max(activeW,activeH));
     const oc=document.createElement('canvas');
-    const activeW=viewMode==='schnitt'?schnittImg.naturalWidth||schnittW:activeImg.naturalWidth||imgW;
-    const activeH=viewMode==='schnitt'?schnittImg.naturalHeight||schnittH:activeImg.naturalHeight||imgH;
-    // Cap at 2400px on longest side to stay within API limits
-    const maxDim=2400;
-    const scale2=Math.min(1,maxDim/Math.max(activeW,activeH));
-    oc.width=Math.round(activeW*scale2);
-    oc.height=Math.round(activeH*scale2);
+    oc.width=Math.round(activeW*upScale);
+    oc.height=Math.round(activeH*upScale);
     const ox=oc.getContext('2d');
-    ox.scale(scale2,scale2);
+    ox.scale(upScale,upScale);
     const rot=viewMode==='schnitt'?imgRotationSchnitt:imgRotationGrundriss;
     if(rot){
       ox.translate(activeW/2,activeH/2);ox.rotate(rot*Math.PI/180);
@@ -2811,6 +2814,8 @@ async function runKIAnalyse(){
       ox.drawImage(activeImg,0,0,activeW,activeH);
     }
     const b64=oc.toDataURL('image/jpeg',0.92).split(',')[1];
+    // Store mapping info: Claude coords (0-1) × activeW/H + activeOX/OY = canvas coords
+    const kiImgW=activeW, kiImgH=activeH, kiImgOX=activeOX, kiImgOY=activeOY;
 
     statusEl.textContent='Claude analysiert den Plan...';
 
@@ -2835,10 +2840,13 @@ KOORDINATENSYSTEM: Bildgröße = 1.0 × 1.0. Punkt [0,0] = oben links, [1,0] = o
 SCHRITT 1 - REF: Suche die längste Maßlinie oder Maßkette mit einem klar lesbaren Meterwert (z.B. "10.00m" oder "5.00"). Die Punkte p1 und p2 sind die exakten Endpunkte dieser Maßlinie (Pfeilspitzen). Bevorzuge horizontale Maßketten am oberen oder unteren Bildrand.
 
 SCHRITT 2 - RÄUME: Erkenne jeden klar beschrifteten Raum. Für jeden Raum:
-- Lies den Raumnamen direkt aus der Planbeschriftung
-- Bestimme die 4 Eckpunkte des Raumes (oder mehr bei L-Form etc.) anhand der Wandlinien
-- Die Punkte müssen auf den tatsächlichen Wänden/Raumgrenzen liegen, nicht geschätzt
-- Gehe im Uhrzeigersinn vor, starte oben links
+- Lies den Raumnamen direkt aus der Planbeschriftung im Plan
+- Verfolge die Wandlinien präzise und bestimme die Eckpunkte exakt dort wo Wände aufeinandertreffen
+- Koordinaten [0,0] = oben-links des GESAMTEN BILDES, [1,1] = unten-rechts des GESAMTEN BILDES
+- Gehe im Uhrzeigersinn vor, starte oben links des jeweiligen Raumes
+- Für rechteckige Räume: genau 4 Punkte. Bei L-Form oder Nischen: mehr Punkte
+
+WICHTIG für REF: Suche außerhalb des Grundrisses nach Maßketten (Linien mit Pfeilspitzen und einer Zahl in Metern). Bevorzuge die längste durchgehende Maßkette – typisch am oberen oder linken Bildrand. p1 und p2 sind die äußeren Endpunkte dieser Maßkette (die Begrenzungsstriche oder Pfeilspitzen), nicht die Beschriftung selbst.
 
 Antworte NUR mit diesem JSON (absolut kein Text davor oder danach, kein Markdown, keine Erklärung):
 {
@@ -2884,12 +2892,9 @@ Antworte NUR mit diesem JSON (absolut kein Text davor oder danach, kein Markdown
     // ── REF verarbeiten ──
     if(parsed.ref&&parsed.ref.p1&&parsed.ref.p2&&parsed.ref.lengthM){
       const r=parsed.ref;
-      const cw=viewMode==='schnitt'?schnittW:imgW;
-      const ch=viewMode==='schnitt'?schnittH:imgH;
-      const ox2=viewMode==='schnitt'?schnittX:imgX;
-      const oy2=viewMode==='schnitt'?schnittY:imgY;
-      const p1={x:ox2+r.p1[0]*cw, y:oy2+r.p1[1]*ch};
-      const p2={x:ox2+r.p2[0]*cw, y:oy2+r.p2[1]*ch};
+      // kiImgW/H/OX/OY are set above – Claude coords map directly to canvas coords
+      const p1={x:kiImgOX+r.p1[0]*kiImgW, y:kiImgOY+r.p1[1]*kiImgH};
+      const p2={x:kiImgOX+r.p2[0]*kiImgW, y:kiImgOY+r.p2[1]*kiImgH};
       kiResults.ref={pts:[p1,p2],lengthM:r.lengthM,confidence:r.confidence};
       refSec.style.display='';
       document.getElementById('ki-ref-preview').innerHTML=
@@ -2899,10 +2904,9 @@ Antworte NUR mit diesem JSON (absolut kein Text davor oder danach, kein Markdown
 
     // ── RÄUME verarbeiten (Grundriss) ──
     if(parsed.rooms&&parsed.rooms.length>0){
-      const cw=imgW,ch=imgH,ox2=imgX,oy2=imgY;
       kiResults.rooms=parsed.rooms.map((rm,i)=>({
         name:rm.name||'Raum '+(i+1),
-        points:(rm.points||[]).map(([x,y])=>({x:ox2+x*cw,y:oy2+y*ch})),
+        points:(rm.points||[]).map(([x,y])=>({x:kiImgOX+x*kiImgW,y:kiImgOY+y*kiImgH})),
         confidence:rm.confidence||'medium',
         accepted:true
       }));
@@ -2912,9 +2916,8 @@ Antworte NUR mit diesem JSON (absolut kein Text davor oder danach, kein Markdown
 
     // ── SCHNITT verarbeiten ──
     if(parsed.schnitt&&parsed.schnitt.points){
-      const cw=schnittW,ch=schnittH,ox2=schnittX,oy2=schnittY;
       kiResults.schnitt={
-        points:(parsed.schnitt.points||[]).map(([x,y])=>({x:ox2+x*cw,y:oy2+y*ch})),
+        points:(parsed.schnitt.points||[]).map(([x,y])=>({x:kiImgOX+x*kiImgW,y:kiImgOY+y*kiImgH})),
         confidence:parsed.schnitt.confidence||'medium',
         accepted:true
       };
