@@ -1108,16 +1108,41 @@ function ptInPoly(px,py,pts){let ins=false;for(let i=0,j=pts.length-1;i<pts.leng
 function calcAbzug(e){const a=e.b*e.h;return(e.vob&&a<2.5)?0:a*e.n;}
 function calcZusatz(e){return e.b*e.h*e.n;}
 function calcInnenecken(pts){
-  // count interior corners (angle < 180°)
   let count=0;
   const n=pts.length;
   for(let i=0;i<n;i++){
     const a=pts[(i-1+n)%n],b=pts[i],c=pts[(i+1)%n];
     const cross=(b.x-a.x)*(c.y-b.y)-(b.y-a.y)*(c.x-b.x);
-    if(cross>0)count++; // interior corner (polygon wound CW in canvas)
+    if(cross>0)count++;
   }
-  // if most are interior, polygon might be CCW - flip
   return Math.max(count, n-count);
+}
+
+// Acryl Wand/Wand mit Dachschrägen-Logik:
+// Ecken an Traufwänden → Kniestockhöhe, alle anderen → volle Raumhöhe
+function calcAcrylWandWand(pts, raumH, traufKanten, knieH){
+  if(!pts||pts.length<3)return 0;
+  const n=pts.length;
+  const traufSet=new Set(traufKanten||[]);
+  let total=0;
+  // Bestimme Windung (CW oder CCW)
+  let area=0;
+  for(let i=0;i<n;i++){const a=pts[i],b=pts[(i+1)%n];area+=(b.x-a.x)*(b.y+a.y);}
+  const isCW=area>0;
+  for(let i=0;i<n;i++){
+    const prev=(i-1+n)%n;
+    const a=pts[prev],b=pts[i],c=pts[(i+1)%n];
+    const cross=(b.x-a.x)*(c.y-b.y)-(b.y-a.y)*(c.x-b.x);
+    const isInterior=isCW?(cross>0):(cross<0);
+    if(!isInterior)continue;
+    // Kante prev→i und Kante i→next
+    const edgeIn=prev;   // Kante die in Punkt i reinläuft
+    const edgeOut=i;     // Kante die aus Punkt i rausläuft
+    const touchesTrauf=traufSet.has(edgeIn)||traufSet.has(edgeOut);
+    // Ecke an Traufwand → Kniestockhöhe, sonst volle Raumhöhe
+    total+=touchesTrauf?Math.min(raumH,knieH||raumH):raumH;
+  }
+  return total;
 }
 
 function getSchnittGeometry(pts,scaleValue,fallbackDc=null){
@@ -1233,6 +1258,14 @@ function roomStats(rm){
   const sockel=per!==null?Math.max(0,per-tuerBreite):null;
   const acrylWD=per; // Wand-Decke = Umfang
   const innenecken=rm.points.length>=3?calcInnenecken(rm.points):0;
+  // Acryl Wand/Wand: bei Dachgeschoss korrekte Höhe pro Ecke
+  const _dc=currentFloor?.dach_config;
+  const _isDachRm=!!(rm.traufKanten&&rm.traufKanten.length>0&&_dc?.aktiv);
+  const acrylWW=rm.points.length>=3
+    ?(_isDachRm
+      ?calcAcrylWandWand(rm.points,rm.height,rm.traufKanten,_dc?.kniestockH||rm.height)
+      :innenecken*rm.height)
+    :0;
   // ── Dachschräge: vollständige Berechnung ──────────────────
   let dachStats=null;
   const dc=currentFloor&&currentFloor.dach_config&&currentFloor.dach_config.aktiv?currentFloor.dach_config:null;
@@ -1409,7 +1442,7 @@ function roomStats(rm){
     wG=wandDachBrutto;
     wN=Math.max(0,wG-abzSum)+zusSum;
   }
-  return{a,per,wG,abzSum,zusSum,wN,sockel,acrylWD,innenecken,dachStats};
+  return{a,per,wG,abzSum,zusSum,wN,sockel,acrylWD,acrylWW,innenecken,dachStats};
 }
 
 // ── DRAW ───────────────────────────────────────────────────
@@ -1702,11 +1735,11 @@ function updSidebar(){
     const sel=selRoom===i;
     const abzHtml=(rm.abzuege||[]).map((e,ei)=>`<div class="entry-item"><span>↓ ${e.name} ${e.b.toFixed(2)}×${e.h.toFixed(2)} ×${e.n}${e.vob?' VOB':''}</span><span class="ev" style="color:#c0392b">-${calcAbzug(e).toFixed(2)} m²</span><span class="entry-del" onclick="delEntry(${i},'abzuege',${ei});event.stopPropagation()">✕</span></div>`).join('');
     const zusHtml=(rm.zusaetze||[]).map((e,ei)=>`<div class="entry-item"><span>↑ ${e.name} ${e.b.toFixed(2)}×${e.h.toFixed(2)} ×${e.n}</span><span class="ev" style="color:#a8e6cf">+${calcZusatz(e).toFixed(2)} m²</span><span class="entry-del" onclick="delEntry(${i},'zusaetze',${ei});event.stopPropagation()">✕</span></div>`).join('');
-    const{a,wG,abzSum,zusSum,wN,sockel,acrylWD,innenecken,dachStats}=roomStats(rm);
+    const{a,wG,abzSum,zusSum,wN,sockel,acrylWD,acrylWW,innenecken,dachStats}=roomStats(rm);
     const lmSection=a!==null?('<br><span style="color:#555;font-size:9px">── Laufende Meter ──</span>'
       +'<br>Sockelleisten: <b>'+(sockel!==null?sockel.toFixed(2):'?')+' m</b>'
       +'<br>Acryl Wand/Decke: <b>'+(acrylWD!==null?acrylWD.toFixed(2):'?')+' m</b>'
-      +'<br>Acryl Wand/Wand: <b>'+(a!==null?(innenecken*rm.height).toFixed(2):'?')+' m</b>'
+      +'<br>Acryl Wand/Wand: <b>'+(acrylWW!==null?acrylWW.toFixed(2):'?')+' m</b>'
       +(dachStats?('<br><span style="color:#c8a96e;font-size:9px">── Dachflächen / Decke ──</span>'
         +'<br>Kniestockwand: <b>'+dachStats.kniestockWand.toFixed(2)+' m²</b>'
         +'<br>Giebelwände: <b>'+dachStats.giebelFlaeche.toFixed(2)+' m²</b>'
@@ -1752,7 +1785,7 @@ function updSidebar(){
     </div>`;
   }).join('');
 
-  list.innerHTML = refCard + roomHtml;
+  list.innerHTML = schnittCard + refCard + roomHtml;
 
   const tot=document.getElementById('totals');
   if(scale && rooms.length){
@@ -1986,7 +2019,8 @@ function generatePDF(project,client,author,opts={}){
       const{acrylWD:awd,innenecken:iec}=roomStats(rm);
       if(awd!==null){
         checkPage(6);doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setFillColor(...rowColor);doc.rect(ML,y,CW,5.5,'F');doc.setTextColor(60,100,140);
-        doc.text('  Acryl Wand/Decke: '+awd.toFixed(2)+' m  ·  Acryl Wand/Wand: '+(iec*rm.height).toFixed(2)+' m',ML+2,y+4);y+=6;
+        const{acrylWW:aww}=roomStats(rm);
+        doc.text('  Acryl Wand/Decke: '+awd.toFixed(2)+' m  ·  Acryl Wand/Wand: '+(aww||0).toFixed(2)+' m',ML+2,y+4);y+=6;
       }
     }
     y+=2;if(a!==null){totalWG+=wG;totalWN+=wN;if(dachStats){totalCeil+=dachStats.deckeGesamt;totalCeilFlat+=dachStats.deckeFlach;totalSlope+=dachStats.schraegeFlaeche;}else{totalCeil+=a;}}
@@ -2414,6 +2448,13 @@ function setView(v){
     if(suBtn)suBtn.style.display='none';
     schnittDrawMode=false;
   }
+  // Punkt 1: Raum-Werkzeuge nur im Grundriss sichtbar
+  const _addRoom=document.getElementById('btn-add-room');
+  const _selRoom=document.getElementById('btn-select');
+  const _sepRaum=document.querySelector('#tb-tools .tb-sep');
+  const _lblRaum=document.querySelector('#tb-tools .tb-label:nth-of-type(2)');
+  if(_addRoom)_addRoom.style.display=v==='schnitt'?'none':'';
+  if(_selRoom)_selRoom.style.display=v==='schnitt'?'none':'';
   draw();updStatus();updSidebar();syncDebugState();updToolbarLockState();
 }
 
@@ -2557,6 +2598,14 @@ function updToolbarLockState(){
     if(b){b.classList.toggle('tb-locked',!hasPlan);}
   });
   // Ref-confirm and draw buttons are contextual, not locked here
+}
+// ── SCHNITT PARAM UPDATE ───────────────────────────────────
+function updSchnittParam(key,val){
+  if(!currentFloor||!currentFloor.dach_config)return;
+  if(isNaN(val)||val<=0)return;
+  currentFloor.dach_config[key]=val;
+  sb.patch('floors',{dach_config:currentFloor.dach_config},'?id=eq.'+currentFloor.id);
+  updSidebar();draw();
 }
 // ── INIT ─────────────────────────────────────────────────
 showScreen('project');
