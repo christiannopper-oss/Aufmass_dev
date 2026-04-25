@@ -2720,12 +2720,32 @@ function initSwipeDelete(){
 // ── TOOLBAR LOCK STATE (no plan = locked) ───────────────────
 function updToolbarLockState(){
   const hasPlan=!!(img||schnittImg);
-  const lockable=['btn-ref','btn-ref-reset','btn-select','btn-add-room'];
-  lockable.forEach(id=>{
-    const b=document.getElementById(id);
-    if(b){b.classList.toggle('tb-locked',!hasPlan);}
-  });
-  // Ref-confirm and draw buttons are contextual, not locked here
+  const isDach=!!(currentFloor?.dach_config?.aktiv);
+  if(isDach && viewMode==='schnitt'){
+    const hasRef=refConfirmed||(refPtsSchnitt.length===2);
+    ['btn-ref','btn-ref-reset'].forEach(id=>{
+      const b=document.getElementById(id);if(b)b.classList.toggle('tb-locked',!hasPlan);
+    });
+    const sdBtn=document.getElementById('btn-schnitt-draw');
+    if(sdBtn)sdBtn.classList.toggle('tb-locked',!hasRef);
+    ['btn-select','btn-add-room'].forEach(id=>{
+      const b=document.getElementById(id);if(b)b.classList.add('tb-locked');
+    });
+  } else if(isDach && viewMode==='grundriss'){
+    const hasSchnitt=!!(scaleSchnitt);
+    const lockable=['btn-ref','btn-ref-reset','btn-select','btn-add-room'];
+    lockable.forEach(id=>{
+      const b=document.getElementById(id);if(b)b.classList.toggle('tb-locked',!hasPlan||!hasSchnitt);
+    });
+  } else {
+    const lockable=['btn-ref','btn-ref-reset','btn-select','btn-add-room'];
+    lockable.forEach(id=>{
+      const b=document.getElementById(id);if(b)b.classList.toggle('tb-locked',!hasPlan);
+    });
+  }
+  // KI-Button einblenden sobald Plan geladen
+  const kiBtn=document.getElementById('btn-ki');
+  if(kiBtn)kiBtn.style.display=hasPlan?'':'none';
 }
 
 // ── KI-ERKENNUNG ────────────────────────────────────────────
