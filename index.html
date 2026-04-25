@@ -3099,8 +3099,13 @@ function previewJsonImport(){
   const raw=document.getElementById('json-import-input').value.trim();
   if(!raw){errEl.textContent='Kein JSON eingefügt.';errEl.style.display='';return;}
 
+  // Normalize typographic quotes and other common copy-paste issues
+  const normalized=raw
+    .replace(/[“”„‟″‶]/g,'"')  // smart double quotes
+    .replace(/[‘’‚‛′‵]/g,"'")  // smart single quotes
+    .replace(/[–—]/g,'-');                          // em/en dash
   let parsed;
-  try{parsed=JSON.parse(raw);}
+  try{parsed=JSON.parse(normalized);}
   catch(e){errEl.textContent='Ungültiges JSON: '+e.message;errEl.style.display='';return;}
 
   // Validate structure
