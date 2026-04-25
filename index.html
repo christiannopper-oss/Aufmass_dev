@@ -2790,32 +2790,42 @@ async function runKIAnalyse(){
     if(!activeImg){statusEl.textContent='Kein Plan geladen.';return;}
 
     // Draw current plan to offscreen canvas for base64
-    // Render plan at high resolution for better OCR and line detection
-    // IMPORTANT: use canvas display dimensions so coordinate mapping stays 1:1
+    // Send original image at full resolution for best OCR quality
+    // Claude coords (0-1) are relative to the original image dimensions
+    // We map back to canvas via: canvasX = imgX + (rx * origW / origW) * imgW
+    //                          = imgX + rx * imgW  (since imgW = origW * ratio)
     const activeW=viewMode==='schnitt'?schnittW:imgW;
     const activeH=viewMode==='schnitt'?schnittH:imgH;
     const activeOX=viewMode==='schnitt'?schnittX:imgX;
     const activeOY=viewMode==='schnitt'?schnittY:imgY;
-    // Upscale for readability but remember the scale factor for coord mapping
-    const maxDim=2048;
-    const upScale=Math.min(3,maxDim/Math.max(activeW,activeH));
-    const oc=document.createElement('canvas');
-    oc.width=Math.round(activeW*upScale);
-    oc.height=Math.round(activeH*upScale);
-    const ox=oc.getContext('2d');
-    ox.scale(upScale,upScale);
+
+    // Use native image dimensions for the sent image
+    const origW=activeImg.naturalWidth||activeImg.width;
+    const origH=activeImg.naturalHeight||activeImg.height;
     const rot=viewMode==='schnitt'?imgRotationSchnitt:imgRotationGrundriss;
+
+    // Render at native resolution (capped at 2400px)
+    const maxDim=2400;
+    const s=Math.min(1,maxDim/Math.max(origW,origH));
+    const oc=document.createElement('canvas');
+    const odd=rot===90||rot===270;
+    oc.width=Math.round((odd?origH:origW)*s);
+    oc.height=Math.round((odd?origW:origH)*s);
+    const ox=oc.getContext('2d');
     if(rot){
-      ox.translate(activeW/2,activeH/2);ox.rotate(rot*Math.PI/180);
-      const odd=rot===90||rot===270;
-      ox.drawImage(activeImg,odd?-activeH/2:-activeW/2,odd?-activeW/2:-activeH/2,
-        odd?activeH:activeW,odd?activeW:activeH);
+      ox.translate(oc.width/2,oc.height/2);
+      ox.rotate(rot*Math.PI/180);
+      ox.drawImage(activeImg,odd?-origH/2*s:-origW/2*s,odd?-origW/2*s:-origH/2*s,origW*s,origH*s);
     } else {
-      ox.drawImage(activeImg,0,0,activeW,activeH);
+      ox.drawImage(activeImg,0,0,origW*s,origH*s);
     }
     const b64=oc.toDataURL('image/jpeg',0.92).split(',')[1];
-    // Store mapping info: Claude coords (0-1) × activeW/H + activeOX/OY = canvas coords
+
+    // Mapping: Claude gives coords relative to sent image (origW×origH after rotation)
+    // Canvas coords = activeOX + rx * activeW,  activeOY + ry * activeH
+    // (imgW already = origW * displayRatio, so ratio cancels out perfectly)
     const kiImgW=activeW, kiImgH=activeH, kiImgOX=activeOX, kiImgOY=activeOY;
+    console.log('KI send – origSize:',origW,'×',origH,'canvasSize:',activeW,'×',activeH,'offset:',activeOX,activeOY);
 
     statusEl.textContent='Claude analysiert den Plan...';
 
