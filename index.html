@@ -395,9 +395,6 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 const SUPABASE_URL = 'https://dfobvtluyxikloyphfwf.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmb2J2dGx1eXhpa2xveXBoZndmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1OTkzNzcsImV4cCI6MjA5MjE3NTM3N30.X9KiYJRotf9dn8UWt1_mi4kkoEjPdlj4wBkweS1xVI8';
 
-// OpenAI / ChatGPT Vision Proxy (Supabase Edge Function)
-const OPENAI_PROXY_URL = 'https://dfobvtluyxikloyphfwf.supabase.co/functions/v1/openai-proxy';
-
 const sb = {
   async query(table, method='GET', body=null, filter=''){
     const url=`${SUPABASE_URL}/rest/v1/${table}${filter}`;
@@ -2759,19 +2756,23 @@ function updToolbarLockState(){
 // ── KI-ERKENNUNG ────────────────────────────────────────────
 let kiResults=null; // {ref:{pts,lengthM}, rooms:[{name,points,accepted}]}
 
-function getApiKey(){return localStorage.getItem('anthropic_api_key')||'';}
+function getApiKey(){return localStorage.getItem('openai_api_key')||'';}
 function saveApiKey(){
   const k=document.getElementById('ki-apikey-input').value.trim();
-  if(!k.startsWith('sk-ant-')){alert('Ungültiger API-Key. Muss mit sk-ant- beginnen.');return;}
-  localStorage.setItem('anthropic_api_key',k);
+  if(!k.startsWith('sk-')){alert('Ungültiger OpenAI API-Key. Muss mit sk- beginnen.');return;}
+  localStorage.setItem('openai_api_key',k);
   document.getElementById('ki-apikey-overlay').style.display='none';
   runKIAnalyse();
 }
 
 function startKIAnalyse(){
   if(!img&&!schnittImg){alert('Bitte zuerst einen Plan laden.');return;}
-  // OpenAI-Key liegt sicher als Supabase Secret im Backend.
-  // Im Frontend wird kein API-Key mehr abgefragt oder gespeichert.
+  const key=getApiKey();
+  if(!key){
+    document.getElementById('ki-apikey-input').value='';
+    document.getElementById('ki-apikey-overlay').style.display='flex';
+    return;
+  }
   runKIAnalyse();
 }
 
@@ -2795,8 +2796,8 @@ async function runKIAnalyse(){
 
     // Draw current plan to offscreen canvas for base64
     // ── KI Image Rendering ──
-    // We render the image at a fixed resolution for Claude.
-    // Claude returns coords [0..1] relative to the rendered image.
+    // We render the image at a fixed resolution for ChatGPT Vision.
+    // ChatGPT returns coords [0..1] relative to the rendered image.
     // We map back: canvasCoord = imgOffset + relCoord * imgDisplaySize
     const activeW=viewMode==='schnitt'?schnittW:imgW;
     const activeH=viewMode==='schnitt'?schnittH:imgH;
@@ -2805,7 +2806,7 @@ async function runKIAnalyse(){
     const rot=viewMode==='schnitt'?imgRotationSchnitt:imgRotationGrundriss;
     const odd=rot===90||rot===270;
 
-    // Rendered image dimensions (what Claude sees)
+    // Rendered image dimensions (what ChatGPT sees)
     // Use natural image size, capped at 2048px
     const natW=activeImg.naturalWidth||activeImg.width||activeW;
     const natH=activeImg.naturalHeight||activeImg.height||activeH;
@@ -2880,36 +2881,69 @@ Antworte NUR mit diesem JSON (absolut kein Text davor oder danach, kein Markdown
   ]
 }`;
 
-    const resp=await fetch(OPENAI_PROXY_URL,{
+    const resp=await fetch(`${SUPABASE_URL}/functions/v1/openai-proxy`,{
       method:'POST',
       headers:{
         'Content-Type':'application/json',
         'Authorization':'Bearer '+SUPABASE_KEY
       },
       body:JSON.stringify({
-        // Beide Felder werden mitgegeben, damit der Proxy sowohl die neue als auch ältere Variante versteht.
         imageBase64:b64,
-        image:'data:image/jpeg;base64,'+b64,
         prompt:prompt,
+        apiKey:getApiKey(),
         model:'gpt-4.1'
       })
     });
 
     if(!resp.ok){
-      let err={};
-      try{err=await resp.json();}catch(_){}
-      if(err.error?.type==='authentication_error'||resp.status===401){
-        statusEl.textContent='OpenAI API-Key fehlt oder ist im Supabase Secret ungültig. Bitte OPENAI_API_KEY in Supabase prüfen.';
+      const err=await resp.json();
+      if(err.error?.type==='authentication_error'){
+        localStorage.removeItem('openai_api_key');
+        statusEl.textContent='OpenAI API-Key ungültig. Bitte neu eingeben.';
+        setTimeout(()=>{overlay.style.display='none';document.getElementById('ki-apikey-overlay').style.display='flex';},1500);
         return;
       }
-      throw new Error(err.error?.message||err.message||'API Fehler '+resp.status);
+      throw new Error(err.error?.message||'API Fehler '+resp.status);
     }
 
     const data=await resp.json();
-    const raw=(data.output_text || data.text || data.content?.[0]?.text || data.output?.[0]?.content?.[0]?.text || data.choices?.[0]?.message?.content || '').trim().replace(/```json|```/g,'').trim();
+
+    // OpenAI/Proxy-Antwort robust auslesen:
+    // Je nach Responses-API/Proxy kann der eigentliche Text in output_text,
+    // output[].content[].text, choices[].message.content oder bereits direkt als JSON kommen.
+    function extractKIText(payload){
+      if(!payload)return '';
+      if(payload.ref&&payload.rooms)return JSON.stringify(payload);
+      const candidates=[];
+      const add=(v)=>{if(typeof v==='string'&&v.trim())candidates.push(v);};
+      const scan=(v)=>{
+        if(!v)return;
+        if(typeof v==='string'){add(v);return;}
+        if(Array.isArray(v)){v.forEach(scan);return;}
+        if(typeof v==='object'){
+          if(typeof v.output_text==='string')add(v.output_text);
+          if(typeof v.text==='string')add(v.text);
+          if(typeof v.content==='string')add(v.content);
+          if(v.message)scan(v.message);
+          if(v.content)scan(v.content);
+          if(v.output)scan(v.output);
+          if(v.choices)scan(v.choices);
+          if(v.data)scan(v.data);
+        }
+      };
+      scan(payload);
+      return candidates.find(s=>s.includes('"rooms"')||s.includes('"ref"')) || candidates[0] || '';
+    }
+
+    let raw=extractKIText(data);
+    if(typeof raw!=='string')raw=String(raw||'');
+    raw=raw.replace(/```json|```/g,'').trim();
+    const firstBrace=raw.indexOf('{'), lastBrace=raw.lastIndexOf('}');
+    if(firstBrace>=0&&lastBrace>firstBrace)raw=raw.slice(firstBrace,lastBrace+1);
+
     let parsed;
     try{parsed=JSON.parse(raw);}
-    catch(e){statusEl.textContent='KI-Antwort konnte nicht gelesen werden. Bitte erneut versuchen.';console.error('KI parse error:',raw);return;}
+    catch(e){statusEl.textContent='KI-Antwort konnte nicht gelesen werden. Bitte erneut versuchen.';console.error('KI parse error raw:',raw);console.error('KI full response:',data);return;}
 
     kiResults={ref:null,rooms:[],schnitt:null};
     // Debug: show mapping info and raw ref coords
@@ -2931,7 +2965,7 @@ Antworte NUR mit diesem JSON (absolut kein Text davor oder danach, kein Markdown
     // ── REF verarbeiten ──
     if(parsed.ref&&parsed.ref.p1&&parsed.ref.p2&&parsed.ref.lengthM){
       const r=parsed.ref;
-      // kiImgW/H/OX/OY are set above – Claude coords map directly to canvas coords
+      // kiImgW/H/OX/OY are set above – ChatGPT coords map directly to canvas coords
       const p1={x:kiImgOX+r.p1[0]*kiImgW, y:kiImgOY+r.p1[1]*kiImgH};
       const p2={x:kiImgOX+r.p2[0]*kiImgW, y:kiImgOY+r.p2[1]*kiImgH};
       kiResults.ref={pts:[p1,p2],lengthM:r.lengthM,confidence:r.confidence};
@@ -3246,7 +3280,7 @@ showScreen('project');
 <!-- KI Analyse Overlay -->
 <div id="ki-overlay">
   <div id="ki-modal">
-    <h3>✦ KI-Erkennung <span class="ki-badge">Claude Vision</span></h3>
+    <h3>✦ KI-Erkennung <span class="ki-badge">ChatGPT Vision</span></h3>
     <div class="ki-status" id="ki-status">Analysiere Plan...</div>
     <div id="ki-ref-section" style="display:none">
       <div style="font-size:11px;font-weight:600;color:var(--txt2);margin-bottom:6px;letter-spacing:.5px">REFERENZPUNKT ERKANNT</div>
