@@ -2828,13 +2828,17 @@ async function runKIAnalyse(){
     const imageData=oc.toDataURL('image/png');
     const b64=imageData.split(',')[1];
 
-    // WICHTIG: Die KI sieht NUR diesen reinen Plan-Ausschnitt (oc), nicht das komplette Canvas.
-    // Daher werden alle KI-Koordinaten [0..1] direkt auf den aktuell sichtbaren Plan-Frame gemappt:
-    // canvasCoord = activeOX/OY + relCoord * activeW/H
-    const kiImgW=activeW;
-    const kiImgH=activeH;
-    const kiImgOX=activeOX;
-    const kiImgOY=activeOY;
+    // WICHTIG: Die KI sieht NUR diesen reinen Plan-Ausschnitt (oc).
+    // Wir berechnen den Plan-Frame neu aus der nativen Bildgröße + aktuellem Wrap,
+    // unabhängig von Zoom/Pan/Sidebar-Größe:
+    const _wr=wrap.getBoundingClientRect();
+    const _nW=natW, _nH=natH;
+    const _srcW=odd?_nH:_nW, _srcH=odd?_nW:_nH;
+    const _fit=Math.min(_wr.width/_srcW, _wr.height/_srcH);
+    const kiImgW=_srcW*_fit;
+    const kiImgH=_srcH*_fit;
+    const kiImgOX=(_wr.width-kiImgW)/2;
+    const kiImgOY=(_wr.height-kiImgH)/2;
     console.log('KI mapping – PLAN FRAME:',Math.round(kiImgW),'x',Math.round(kiImgH),'offset:',Math.round(kiImgOX),Math.round(kiImgOY));
     console.log('KI – sent plan crop:',oc.width,'x',oc.height,'| display frame:',Math.round(activeW),'x',Math.round(activeH),'| offset:',Math.round(activeOX),Math.round(activeOY),'| nat:',natW,'x',natH);
 
@@ -2860,12 +2864,15 @@ KOORDINATENSYSTEM: Du siehst nur den reinen Plan-Ausschnitt ohne App-Canvas. Bil
 
 SCHRITT 1 - REF: Suche die längste Maßlinie oder Maßkette mit einem klar lesbaren Meterwert (z.B. "10.00m" oder "5.00"). Die Punkte p1 und p2 sind die exakten Endpunkte dieser Maßlinie (Pfeilspitzen). Bevorzuge horizontale Maßketten am oberen oder unteren Bildrand.
 
-SCHRITT 2 - RÄUME: Erkenne jeden klar beschrifteten Raum. Für jeden Raum:
-- Lies den Raumnamen direkt aus der Planbeschriftung im Plan
-- Verfolge die Wandlinien präzise und bestimme die Eckpunkte exakt dort wo Wände aufeinandertreffen
-- Koordinaten [0,0] = oben-links des zugeschnittenen Planbildes, [1,1] = unten-rechts des zugeschnittenen Planbildes
-- Gehe im Uhrzeigersinn vor, starte oben links des jeweiligen Raumes
-- Für rechteckige Räume: genau 4 Punkte. Bei L-Form oder Nischen: mehr Punkte
+SCHRITT 2 - RÄUME: Erkenne NUR Räume die explizit mit einem Namen beschriftet sind.
+WICHTIG: Erfinde keine Räume. Wenn kein Name lesbar ist, überspringe den Bereich.
+Für jeden beschrifteten Raum:
+- Raumnamen EXAKT aus der Planbeschriftung übernehmen (z.B. "Kind 1", "Eltern", "Bad")
+- Wandlinien präzise verfolgen, Eckpunkte genau an Wandkreuzungen setzen
+- Koordinaten relativ zum Bild: [0,0] = oben-links, [1,1] = unten-rechts
+- Uhrzeigersinn, Start oben-links des Raumes
+- Rechteckige Räume = genau 4 Punkte, L-Form = mehr Punkte
+- Treppe, Aufzug, Schacht = NICHT aufführen
 
 WICHTIG für REF: Suche außerhalb des Grundrisses nach Maßketten (Linien mit Pfeilspitzen und einer Zahl in Metern). Bevorzuge die längste durchgehende Maßkette – typisch am oberen oder linken Bildrand. p1 und p2 sind die äußeren Endpunkte dieser Maßkette (die Begrenzungsstriche oder Pfeilspitzen), nicht die Beschriftung selbst.
 
