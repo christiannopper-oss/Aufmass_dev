@@ -2450,6 +2450,8 @@ async function showPage(pageNum,isSchnitt=false){
   } else {
     img=i;imgW=srcW*ratio;imgH=srcH*ratio;
     imgX=(r.width-imgW)/2;imgY=(r.height-imgH)/2;
+    img._kiRatioX=imgW; img._kiRatioY=imgH; // store for KI coord mapping
+    img._kiOffX=imgX;   img._kiOffY=imgY;
     zoom=1;panX=0;panY=0;
     document.getElementById('drop-hint').style.display='none';
     await savePlanSnapshot(dataUrl,false,pageNum);
@@ -2790,39 +2792,44 @@ async function runKIAnalyse(){
     if(!activeImg){statusEl.textContent='Kein Plan geladen.';return;}
 
     // Draw current plan to offscreen canvas for base64
-    // Render the image independently of current zoom/pan at a fixed size
-    // so coordinate mapping is always consistent regardless of user zoom state
+    // ── KI Image Rendering ──
+    // We render the image at a fixed resolution for Claude.
+    // Claude returns coords [0..1] relative to the rendered image.
+    // We map back: canvasCoord = imgOffset + relCoord * imgDisplaySize
     const activeW=viewMode==='schnitt'?schnittW:imgW;
     const activeH=viewMode==='schnitt'?schnittH:imgH;
     const activeOX=viewMode==='schnitt'?schnittX:imgX;
     const activeOY=viewMode==='schnitt'?schnittY:imgY;
     const rot=viewMode==='schnitt'?imgRotationSchnitt:imgRotationGrundriss;
-
-    // Render at fixed 1600px wide for OCR quality, independent of canvas display size
-    const KI_SIZE=1600;
     const odd=rot===90||rot===270;
-    const srcW=odd?activeImg.naturalHeight||activeH:activeImg.naturalWidth||activeW;
-    const srcH=odd?activeImg.naturalWidth||activeW:activeImg.naturalHeight||activeH;
-    const ks=KI_SIZE/Math.max(srcW,srcH);
+
+    // Rendered image dimensions (what Claude sees)
+    // Use natural image size, capped at 2048px
+    const natW=activeImg.naturalWidth||activeImg.width||activeW;
+    const natH=activeImg.naturalHeight||activeImg.height||activeH;
+    const dispSrcW=odd?natH:natW;
+    const dispSrcH=odd?natW:natH;
+    const cap=2048;
+    const ks=Math.min(1,cap/Math.max(dispSrcW,dispSrcH));
     const oc=document.createElement('canvas');
-    oc.width=Math.round(srcW*ks);
-    oc.height=Math.round(srcH*ks);
+    oc.width=Math.round(dispSrcW*ks);
+    oc.height=Math.round(dispSrcH*ks);
     const ox=oc.getContext('2d');
     if(rot){
       ox.translate(oc.width/2,oc.height/2);
       ox.rotate(rot*Math.PI/180);
-      ox.drawImage(activeImg,odd?-srcH/2*ks:-srcW/2*ks,odd?-srcW/2*ks:-srcH/2*ks,
-        (odd?srcH:srcW)*ks,(odd?srcW:srcH)*ks);
+      ox.drawImage(activeImg,-natW/2*ks,-natH/2*ks,natW*ks,natH*ks);
     } else {
       ox.drawImage(activeImg,0,0,oc.width,oc.height);
     }
     const b64=oc.toDataURL('image/jpeg',0.92).split(',')[1];
 
-    // Claude gives coords [0-1] relative to oc.width × oc.height
-    // Map to canvas: canvasX = activeOX + rx * activeW, canvasY = activeOY + ry * activeH
-    // This works because oc and canvas both represent the full image, just different scales
-    const kiImgW=activeW, kiImgH=activeH, kiImgOX=activeOX, kiImgOY=activeOY;
-    console.log('KI send – rendered:',oc.width,'×',oc.height,'canvas display:',activeW,'×',activeH,'offset:',activeOX,activeOY);
+    // Use stored display dimensions from when image was loaded (not current resize state)
+    const kiImgW = activeImg._kiRatioX || activeW;
+    const kiImgH = activeImg._kiRatioY || activeH;
+    const kiImgOX= activeImg._kiOffX   !== undefined ? activeImg._kiOffX : activeOX;
+    const kiImgOY= activeImg._kiOffY   !== undefined ? activeImg._kiOffY : activeOY;
+    console.log('KI – sent image:',oc.width,'x',oc.height,'| display:',Math.round(activeW),'x',Math.round(activeH),'| offset:',Math.round(activeOX),Math.round(activeOY),'| nat:',natW,'x',natH);
 
     statusEl.textContent='Claude analysiert den Plan...';
 
