@@ -236,7 +236,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
       <div class="tb-sep" id="sep-dach" style="display:none"></div>
       <div class="tb-group" id="grp-dach" style="display:none">
         <span class="tb-label">Dach</span>
-        <button class="tbtn warn" id="btn-trauf" onclick="setTool('trauf')">Traufseite markieren</button>
+        <button class="tbtn warn" id="btn-trauf" onclick="setTool('trauf')">Traufseite L/R</button>
         <button class="tbtn" id="btn-schnitt-draw" onclick="startSchnittDraw()">✦ Schnitt zeichnen</button>
         <button class="tbtn confirm" id="btn-schnitt-confirm" style="display:none" onclick="confirmSchnitt()">✓ Auswerten</button>
         <button class="tbtn" id="btn-schnitt-undo" style="display:none" onclick="schnittUndo()">↩ Punkt löschen</button>
@@ -436,7 +436,7 @@ let viewMode='grundriss';
 function getCurrentRotation(){return viewMode==='schnitt'?imgRotationSchnitt:imgRotationGrundriss;}
 function setCurrentRotation(v){if(viewMode==='schnitt')imgRotationSchnitt=v;else imgRotationGrundriss=v;}
 let schnittResult=null;
-let traufKanten=[];
+let traufKanten=[]; // deprecated, kept for compat
 let persistedRefPtsGrundrissRaw=null;
 let persistedRefPtsSchnittRaw=null;
 let persistedSchnittPtsRaw=null;
@@ -601,7 +601,8 @@ async function openFloor(id){
     ...rm,
     pointsNorm:(rm.points||[]),
     points:[],
-    traufKanten:rm.trauf_kanten||[]
+    traufKanten:rm.trauf_kanten||[],
+        traufSeiten:rm.trauf_seiten||{}
   }));
 
   // reset visible plans; restore after the app screen is visible
@@ -902,10 +903,10 @@ async function saveRoom(room){
   const normalizedPoints = normalizePtsForView(room.points||[],'grundriss');
   room.pointsNorm = normalizedPoints;
   if(!room.id){
-    const res=await sb.post('rooms',{floor_id:currentFloor.id,name:room.name,height:room.height,points:normalizedPoints,abzuege:room.abzuege||[],zusaetze:room.zusaetze||[],trauf_kanten:room.traufKanten||[]});
+    const res=await sb.post('rooms',{floor_id:currentFloor.id,name:room.name,height:room.height,points:normalizedPoints,abzuege:room.abzuege||[],zusaetze:room.zusaetze||[],trauf_kanten:room.traufKanten||[],trauf_seiten:room.traufSeiten||{}});
     if(res&&res[0])room.id=res[0].id;
   } else {
-    await sb.patch('rooms',{name:room.name,height:room.height,points:normalizedPoints,abzuege:room.abzuege||[],zusaetze:room.zusaetze||[],trauf_kanten:room.traufKanten||[]},'?id=eq.'+room.id);
+    await sb.patch('rooms',{name:room.name,height:room.height,points:normalizedPoints,abzuege:room.abzuege||[],zusaetze:room.zusaetze||[],trauf_kanten:room.traufKanten||[],trauf_seiten:room.traufSeiten||{}},'?id=eq.'+room.id);
   }
   showSaveIndicator();
   syncDebugState();
@@ -1233,6 +1234,9 @@ function roomStats(rm){
     let knieH=dc.kniestockH||1.2;
     let firstH=dc.firstH||2.8;
     let neigRad=(dc.neigung||38)*Math.PI/180;
+    // Separate Neigungen für links/rechts aus Schnitt
+    const neigRadLeft=(dc.neigungLeft||dc.neigung||38)*Math.PI/180;
+    const neigRadRight=(dc.neigungRight||dc.neigung||38)*Math.PI/180;
     let normH=2.5; // normale Raumhöhe (abgehängte Decke / Drempelhöhe)
 
     const sp=dc.schnittPts;
@@ -1251,18 +1255,39 @@ function roomStats(rm){
     // Für Wandflächen zählt die tatsächliche Raumhöhe dieses Raums.
     const raumH = rm.height||normH;
     const wandHoeheUeberKnie = Math.max(0, raumH-knieH);
-    const wandSchraegeTiefe = Math.tan(neigRad)>0.01?wandHoeheUeberKnie/Math.tan(neigRad):0;
+    // wandSchraegeTiefe berechnet weiter unten als Durchschnitt L+R
 
     // Für Decken-/Schrägflächen bleibt die Schnittgeometrie maßgeblich.
-    const schraegeHoehe=normH-knieH; // vertikale Höhe der Schräge bis Deckenhöhe aus Schnitt
+    // Pro Kante wird die passende Neigung verwendet
+    function schraegeProMeterForEdge(ei){
+      const nr=neigRadForEdge(ei);
+      const schrH=normH-knieH;
+      const schrT=Math.tan(nr)>0.01?schrH/Math.tan(nr):0;
+      return Math.cos(nr)>0.01?schrT/Math.cos(nr):schrT;
+    }
+    function schraegeTiefeForEdge(ei){
+      const nr=neigRadForEdge(ei);
+      const schrH=normH-knieH;
+      return Math.tan(nr)>0.01?schrH/Math.tan(nr):0;
+    }
+    // Globaler Durchschnitt für wandSchraegeTiefe (Giebelwände)
+    const schraegeHoehe=normH-knieH;
     const schraegeTiefe=Math.tan(neigRad)>0.01?schraegeHoehe/Math.tan(neigRad):0;
-    // Schrägfläche pro laufendem Meter Traufe
-    const schraegeProMeter=Math.cos(neigRad)>0.01?schraegeTiefe/Math.cos(neigRad):schraegeTiefe;
+    const wandSchraegeTiefeL=Math.tan(neigRadLeft)>0.01?(Math.max(0,raumH-knieH))/Math.tan(neigRadLeft):0;
+    const wandSchraegeTiefeR=Math.tan(neigRadRight)>0.01?(Math.max(0,raumH-knieH))/Math.tan(neigRadRight):0;
 
     // ── 3. Kanteneinteilung ──
     const pts=rm.points;
     const n=pts.length;
     const traufSet=new Set(rm.traufKanten||[]);
+    const traufSeiten=rm.traufSeiten||{};
+    // Hilfsfunktion: Neigung für eine bestimmte Trauf-Kante
+    function neigRadForEdge(ei){
+      const side=traufSeiten[ei];
+      if(side==='left')return neigRadLeft;
+      if(side==='right')return neigRadRight;
+      return neigRad; // Fallback: Durchschnitt
+    }
 
     // For each edge, classify:
     // - TRAUF: marked by user → Kniestockwand
@@ -1270,6 +1295,8 @@ function roomStats(rm){
     // - NORMAL: opposite side, full height (normH)
     // - INNEN: any other edge (treated as full height)
 
+    // wandSchraegeTiefe als Durchschnitt für Giebelberechnung
+    const wandSchraegeTiefe=(wandSchraegeTiefeL+wandSchraegeTiefeR)/2;
     // Build adjacency: which edges share a vertex with a trauf edge
     const traufVertices=new Set();
     traufSet.forEach(ei=>{
@@ -1307,7 +1334,7 @@ function roomStats(rm){
 
       if(t==='trauf'){
         kniestockWand+=edgeLen*Math.min(raumH,knieH);
-        schraegeFlaeche+=edgeLen*schraegeProMeter;
+        schraegeFlaeche+=edgeLen*schraegeProMeterForEdge(i);
       } else if(t==='giebel'){
         // Giebelflächen orientieren sich an der tatsächlichen Raumhöhe.
         if(raumH<=knieH){
@@ -1339,7 +1366,7 @@ function roomStats(rm){
     traufSet.forEach(ei=>{
       const va=pts[ei],vb=pts[(ei+1)%n];
       const edgeLen=Math.hypot(vb.x-va.x,vb.y-va.y)/scale;
-      schraegeGrundProj+=edgeLen*schraegeTiefe;
+      schraegeGrundProj+=edgeLen*schraegeTiefeForEdge(ei);
     });
     const deckeFlach=a!==null?Math.max(0,a-schraegeGrundProj):0;
 
@@ -1478,15 +1505,19 @@ function draw(){
     const cx=pts.reduce((s,p)=>s+p.x,0)/pts.length,cy=pts.reduce((s,p)=>s+p.y,0)/pts.length;
     ctx.fillStyle=sel?'#8a5f00':'#1a1a1a';ctx.font=`600 ${13/zoom}px monospace`;ctx.textAlign='center';ctx.fillText(rm.name,cx,cy-6/zoom);
     if(scale){const{a}=roomStats(rm);ctx.font=`${10/zoom}px monospace`;ctx.fillStyle='#666';ctx.fillText(a.toFixed(2)+' m\u00b2',cx,cy+9/zoom);}
-    // draw trauf edges
+    // draw trauf edges with side color
     if(currentFloor&&currentFloor.dach_config&&currentFloor.dach_config.aktiv){
+      const ts=rm.traufSeiten||{};
       (rm.traufKanten||[]).forEach(ei=>{
         const a=pts[ei],b=pts[(ei+1)%pts.length];
+        const side=ts[ei]; // 'left'|'right'|undefined
+        const col=side==='left'?'#2a7ab8':side==='right'?'#d4640a':'#e74c3c';
+        const lbl=side==='left'?'◁ Traufe L':side==='right'?'▷ Traufe R':'Traufe ?';
         ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
-        ctx.strokeStyle='#e74c3c';ctx.lineWidth=3/zoom;ctx.stroke();
+        ctx.strokeStyle=col;ctx.lineWidth=3.5/zoom;ctx.stroke();
         const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
-        ctx.font=`${10/zoom}px monospace`;ctx.fillStyle='#e74c3c';ctx.textAlign='center';
-        ctx.fillText('Traufe',mx,my-6/zoom);
+        ctx.font=`600 ${10/zoom}px monospace`;ctx.fillStyle=col;ctx.textAlign='center';
+        ctx.fillText(lbl,mx,my-7/zoom);
       });
     }
     pts.forEach((p,pi)=>{const isDrag=drag&&drag.roomIdx===i&&drag.ptIdx===pi,isHov=hoverPt&&hoverPt.roomIdx===i&&hoverPt.ptIdx===pi;ctx.beginPath();ctx.arc(p.x,p.y,(isDrag||isHov?6:3.5)/zoom,0,Math.PI*2);ctx.fillStyle=isDrag?'#1a1a1a':sel?'#b8914a':'#3a7ab8';ctx.fill();if(isDrag||isHov){ctx.beginPath();ctx.arc(p.x,p.y,PT_HIT/zoom,0,Math.PI*2);ctx.strokeStyle='#c8a96e88';ctx.lineWidth=1.5/zoom;ctx.stroke();}});
@@ -1997,7 +2028,6 @@ function handleTap(wx,wy){
     return;
   }
   if(tool==='trauf'){
-    // find which room edge was clicked
     const r=EDGE_HIT/zoom;
     for(let ri=0;ri<rooms.length;ri++){
       const pts=rooms[ri].points,n=pts.length;
@@ -2005,9 +2035,20 @@ function handleTap(wx,wy){
         const s=projSeg(wx,wy,pts[ei],pts[(ei+1)%n]);
         if(s.d<r){
           if(!rooms[ri].traufKanten)rooms[ri].traufKanten=[];
-          const idx=rooms[ri].traufKanten.indexOf(ei);
-          if(idx>=0)rooms[ri].traufKanten.splice(idx,1);
-          else rooms[ri].traufKanten.push(ei);
+          if(!rooms[ri].traufSeiten)rooms[ri].traufSeiten={};
+          const cur=rooms[ri].traufSeiten[ei]; // undefined | 'left' | 'right'
+          if(!cur){
+            // Nicht markiert → links
+            if(!rooms[ri].traufKanten.includes(ei))rooms[ri].traufKanten.push(ei);
+            rooms[ri].traufSeiten[ei]='left';
+          } else if(cur==='left'){
+            // Links → rechts
+            rooms[ri].traufSeiten[ei]='right';
+          } else {
+            // Rechts → entfernen
+            rooms[ri].traufKanten=rooms[ri].traufKanten.filter(k=>k!==ei);
+            delete rooms[ri].traufSeiten[ei];
+          }
           saveRoom(rooms[ri]);draw();return;
         }
       }
