@@ -2910,13 +2910,18 @@ Antworte NUR mit diesem JSON (absolut kein Text davor oder danach, kein Markdown
 
     kiResults={ref:null,rooms:[],schnitt:null};
     // Debug: show mapping info and raw ref coords
-    console.log('KI Debug – Canvas mapping:',{kiImgW,kiImgH,kiImgOX,kiImgOY});
-    console.log('KI Debug – Raw response:',JSON.stringify(parsed,null,2));
+    console.log('KI Debug – Canvas mapping:',{kiImgW:Math.round(kiImgW),kiImgH:Math.round(kiImgH),kiImgOX:Math.round(kiImgOX),kiImgOY:Math.round(kiImgOY)});
+    console.log('KI Debug – Full raw JSON:',JSON.stringify(parsed));
     if(parsed.ref){
       const r=parsed.ref;
-      console.log('KI Debug – Ref raw coords:',r.p1,r.p2,'→ canvas:',
-        {x:kiImgOX+r.p1[0]*kiImgW, y:kiImgOY+r.p1[1]*kiImgH},
-        {x:kiImgOX+r.p2[0]*kiImgW, y:kiImgOY+r.p2[1]*kiImgH});
+      console.log('KI Debug – Ref:',r.p1,'→',r.p2,'=',r.lengthM,'m canvas→',
+        Math.round(kiImgOX+r.p1[0]*kiImgW),Math.round(kiImgOY+r.p1[1]*kiImgH),
+        '→',Math.round(kiImgOX+r.p2[0]*kiImgW),Math.round(kiImgOY+r.p2[1]*kiImgH));
+    }
+    if(parsed.rooms){
+      parsed.rooms.forEach((rm,i)=>{
+        console.log('KI Room',i,rm.name,':',JSON.stringify(rm.points));
+      });
     }
     statusEl.innerHTML='Analyse abgeschlossen. <span style="font-size:10px;color:var(--txt3)">(Details in Browser-Konsole)</span>';
 
