@@ -395,6 +395,9 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 const SUPABASE_URL = 'https://dfobvtluyxikloyphfwf.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmb2J2dGx1eXhpa2xveXBoZndmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1OTkzNzcsImV4cCI6MjA5MjE3NTM3N30.X9KiYJRotf9dn8UWt1_mi4kkoEjPdlj4wBkweS1xVI8';
 
+// OpenAI / ChatGPT Vision Proxy (Supabase Edge Function)
+const OPENAI_PROXY_URL = 'https://dfobvtluyxikloyphfwf.supabase.co/functions/v1/openai-proxy';
+
 const sb = {
   async query(table, method='GET', body=null, filter=''){
     const url=`${SUPABASE_URL}/rest/v1/${table}${filter}`;
@@ -2756,23 +2759,19 @@ function updToolbarLockState(){
 // ── KI-ERKENNUNG ────────────────────────────────────────────
 let kiResults=null; // {ref:{pts,lengthM}, rooms:[{name,points,accepted}]}
 
-function getApiKey(){return localStorage.getItem('openai_api_key')||'';}
+function getApiKey(){return localStorage.getItem('anthropic_api_key')||'';}
 function saveApiKey(){
   const k=document.getElementById('ki-apikey-input').value.trim();
-  if(!k.startsWith('sk-')){alert('Ungültiger OpenAI API-Key. Muss mit sk- beginnen.');return;}
-  localStorage.setItem('openai_api_key',k);
+  if(!k.startsWith('sk-ant-')){alert('Ungültiger API-Key. Muss mit sk-ant- beginnen.');return;}
+  localStorage.setItem('anthropic_api_key',k);
   document.getElementById('ki-apikey-overlay').style.display='none';
   runKIAnalyse();
 }
 
 function startKIAnalyse(){
   if(!img&&!schnittImg){alert('Bitte zuerst einen Plan laden.');return;}
-  const key=getApiKey();
-  if(!key){
-    document.getElementById('ki-apikey-input').value='';
-    document.getElementById('ki-apikey-overlay').style.display='flex';
-    return;
-  }
+  // OpenAI-Key liegt sicher als Supabase Secret im Backend.
+  // Im Frontend wird kein API-Key mehr abgefragt oder gespeichert.
   runKIAnalyse();
 }
 
@@ -2796,9 +2795,9 @@ async function runKIAnalyse(){
 
     // Draw current plan to offscreen canvas for base64
     // ── KI Image Rendering ──
-    // We render the pure plan image at a fixed resolution for OpenAI Vision.
-    // OpenAI returns coords [0..1] relative to this rendered plan image.
-    // IMPORTANT: We map back with the actual app image-frame (imgX/imgY/imgW/imgH), not with a recalculated frame.
+    // We render the image at a fixed resolution for Claude.
+    // Claude returns coords [0..1] relative to the rendered image.
+    // We map back: canvasCoord = imgOffset + relCoord * imgDisplaySize
     const activeW=viewMode==='schnitt'?schnittW:imgW;
     const activeH=viewMode==='schnitt'?schnittH:imgH;
     const activeOX=viewMode==='schnitt'?schnittX:imgX;
@@ -2827,14 +2826,20 @@ async function runKIAnalyse(){
     }
     const b64=oc.toDataURL('image/jpeg',0.92).split(',')[1];
 
-    // Authoritative world-coordinate mapping inside the app.
-    // This fixes the previous scale drift: the AI image and the imported points now share the same frame.
-    const kiImgW=activeW;
-    const kiImgH=activeH;
-    const kiImgOX=activeOX;
-    const kiImgOY=activeOY;
-    console.log('KI mapping – actual app frame:',Math.round(kiImgW),'x',Math.round(kiImgH),'offset:',Math.round(kiImgOX),Math.round(kiImgOY));
-    console.log('KI – sent image:',oc.width,'x',oc.height,'| app frame:',Math.round(activeW),'x',Math.round(activeH),'| offset:',Math.round(activeOX),Math.round(activeOY),'| nat:',natW,'x',natH);
+    // Recalculate display dimensions fresh from current canvas size
+    // This is the authoritative mapping: what fraction of canvas does the plan occupy?
+    const _r=wrap.getBoundingClientRect();
+    const _natW=activeImg.naturalWidth||activeImg.width;
+    const _natH=activeImg.naturalHeight||activeImg.height;
+    const _rot=rot; const _odd=odd;
+    const _srcW=_odd?_natH:_natW, _srcH=_odd?_natW:_natH;
+    const _ratio=Math.min((_r.width-40)/_srcW,(_r.height-40)/_srcH);
+    const kiImgW=_srcW*_ratio;
+    const kiImgH=_srcH*_ratio;
+    const kiImgOX=(_r.width-kiImgW)/2;
+    const kiImgOY=(_r.height-kiImgH)/2;
+    console.log('KI mapping – recalculated:',Math.round(kiImgW),'x',Math.round(kiImgH),'offset:',Math.round(kiImgOX),Math.round(kiImgOY));
+    console.log('KI – sent image:',oc.width,'x',oc.height,'| display:',Math.round(activeW),'x',Math.round(activeH),'| offset:',Math.round(activeOX),Math.round(activeOY),'| nat:',natW,'x',natH);
 
     statusEl.textContent='ChatGPT analysiert den Plan...';
 
@@ -2875,33 +2880,33 @@ Antworte NUR mit diesem JSON (absolut kein Text davor oder danach, kein Markdown
   ]
 }`;
 
-    const resp=await fetch(`${SUPABASE_URL}/functions/v1/openai-proxy`,{
+    const resp=await fetch(OPENAI_PROXY_URL,{
       method:'POST',
       headers:{
         'Content-Type':'application/json',
         'Authorization':'Bearer '+SUPABASE_KEY
       },
       body:JSON.stringify({
+        // Beide Felder werden mitgegeben, damit der Proxy sowohl die neue als auch ältere Variante versteht.
         imageBase64:b64,
+        image:'data:image/jpeg;base64,'+b64,
         prompt:prompt,
-        apiKey:getApiKey(),
         model:'gpt-4.1'
       })
     });
 
     if(!resp.ok){
-      const err=await resp.json();
+      let err={};
+      try{err=await resp.json();}catch(_){}
       if(err.error?.type==='authentication_error'||resp.status===401){
-        localStorage.removeItem('openai_api_key');
-        statusEl.textContent='OpenAI API-Key ungültig. Bitte neu eingeben.';
-        setTimeout(()=>{overlay.style.display='none';document.getElementById('ki-apikey-overlay').style.display='flex';},1500);
+        statusEl.textContent='OpenAI API-Key fehlt oder ist im Supabase Secret ungültig. Bitte OPENAI_API_KEY in Supabase prüfen.';
         return;
       }
-      throw new Error(err.error?.message||'API Fehler '+resp.status);
+      throw new Error(err.error?.message||err.message||'API Fehler '+resp.status);
     }
 
     const data=await resp.json();
-    const raw=(data.output_text || data.text || data.content?.[0]?.text || data.choices?.[0]?.message?.content || '').trim().replace(/```json|```/g,'').trim();
+    const raw=(data.output_text || data.text || data.content?.[0]?.text || data.output?.[0]?.content?.[0]?.text || data.choices?.[0]?.message?.content || '').trim().replace(/```json|```/g,'').trim();
     let parsed;
     try{parsed=JSON.parse(raw);}
     catch(e){statusEl.textContent='KI-Antwort konnte nicht gelesen werden. Bitte erneut versuchen.';console.error('KI parse error:',raw);return;}
@@ -3135,11 +3140,18 @@ async function applyJsonImport(){
 
   // ── Ref setzen ──
   if(ref){
-    // Use the actual plan frame in app-world coordinates. Do not recalculate from the viewport.
-    const dW=viewMode==='schnitt'?schnittW:imgW;
-    const dH=viewMode==='schnitt'?schnittH:imgH;
-    const dX=viewMode==='schnitt'?schnittX:imgX;
-    const dY=viewMode==='schnitt'?schnittY:imgY;
+    const cw=viewMode==='schnitt'?schnittW:imgW;
+    const ch=viewMode==='schnitt'?schnittH:imgH;
+    const ox=viewMode==='schnitt'?schnittX:imgX;
+    const oy=viewMode==='schnitt'?schnittY:imgY;
+    // Recalculate display dimensions fresh (same as KI)
+    const _r=wrap.getBoundingClientRect();
+    const activeImg2=viewMode==='schnitt'?schnittImg:img;
+    const _natW=activeImg2.naturalWidth||activeImg2.width;
+    const _natH=activeImg2.naturalHeight||activeImg2.height;
+    const _ratio=Math.min((_r.width-40)/_natW,(_r.height-40)/_natH);
+    const dW=_natW*_ratio, dH=_natH*_ratio;
+    const dX=(_r.width-dW)/2, dY=(_r.height-dH)/2;
 
     const p1={x: dX + ref.p1[0]*dW, y: dY + ref.p1[1]*dH};
     const p2={x: dX + ref.p2[0]*dW, y: dY + ref.p2[1]*dH};
@@ -3158,10 +3170,13 @@ async function applyJsonImport(){
   }
 
   // ── Räume setzen ──
-  const dW2=viewMode==='schnitt'?schnittW:imgW;
-  const dH2=viewMode==='schnitt'?schnittH:imgH;
-  const dX2=viewMode==='schnitt'?schnittX:imgX;
-  const dY2=viewMode==='schnitt'?schnittY:imgY;
+  const _r2=wrap.getBoundingClientRect();
+  const activeImg3=viewMode==='schnitt'?schnittImg:img;
+  const _natW2=activeImg3.naturalWidth||activeImg3.width;
+  const _natH2=activeImg3.naturalHeight||activeImg3.height;
+  const _ratio2=Math.min((_r2.width-40)/_natW2,(_r2.height-40)/_natH2);
+  const dW2=_natW2*_ratio2, dH2=_natH2*_ratio2;
+  const dX2=(_r2.width-dW2)/2, dY2=(_r2.height-dH2)/2;
 
   for(const rm of importRooms){
     const points=rm.points.map(([x,y])=>({
@@ -3198,9 +3213,9 @@ showScreen('project');
 <div id="json-import-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:600;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)">
   <div style="background:var(--bg2);border-radius:14px;padding:28px;width:min(560px,94vw);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:14px">
     <h3 style="font-size:15px;font-weight:700;color:var(--txt);display:flex;align-items:center;gap:8px">
-      ↓ JSON Import <span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#6e3ff322;color:#6e3ff3;font-weight:600">ChatGPT</span>
+      ↓ JSON Import <span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#6e3ff322;color:#6e3ff3;font-weight:600">ChatGPT / Claude</span>
     </h3>
-    <p style="font-size:12px;color:var(--txt2);line-height:1.6">Füge das JSON aus ChatGPT ein. Ref und Räume werden automatisch gesetzt.</p>
+    <p style="font-size:12px;color:var(--txt2);line-height:1.6">Füge das JSON aus ChatGPT oder Claude ein. Ref und Räume werden automatisch gesetzt.</p>
     <textarea id="json-import-input" placeholder='{ "ref": {...}, "rooms": [...] }' 
       style="width:100%;height:180px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);font-family:'DM Mono',monospace;font-size:11px;color:var(--txt);background:var(--bg);resize:vertical;outline:none;line-height:1.6"></textarea>
     <div id="json-import-error" style="font-size:11px;color:var(--red);display:none;padding:8px 12px;background:rgba(192,57,43,.08);border-radius:var(--radius)"></div>
@@ -3217,10 +3232,10 @@ showScreen('project');
 <div id="ki-apikey-overlay">
   <div id="ki-apikey-modal">
     <h3 style="font-size:15px;font-weight:700;margin-bottom:6px">✦ KI-Erkennung einrichten</h3>
-    <p style="font-size:12px;color:var(--txt2);margin-bottom:16px;line-height:1.7">Gib deinen OpenAI API-Key ein. Er wird nur in diesem Browser gespeichert und über deine Supabase Edge Function an OpenAI weitergereicht.</p>
+    <p style="font-size:12px;color:var(--txt2);margin-bottom:16px;line-height:1.7">Gib deinen Anthropic API-Key ein. Er wird nur in diesem Browser gespeichert und nicht übertragen.</p>
     <label style="font-size:10px;color:var(--txt3);letter-spacing:1px;font-weight:600;display:block;margin-bottom:5px">API KEY</label>
-    <input id="ki-apikey-input" type="password" placeholder="sk-..." style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius);font-family:'DM Mono',monospace;font-size:12px;margin-bottom:14px;outline:none">
-    <p style="font-size:10px;color:var(--txt3);margin-bottom:14px">Zu finden unter <b>platform.openai.com</b> → API Keys</p>
+    <input id="ki-apikey-input" type="password" placeholder="sk-ant-..." style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius);font-family:'DM Mono',monospace;font-size:12px;margin-bottom:14px;outline:none">
+    <p style="font-size:10px;color:var(--txt3);margin-bottom:14px">Zu finden unter <b>console.anthropic.com</b> → API Keys</p>
     <div style="display:flex;gap:8px">
       <button onclick="document.getElementById('ki-apikey-overlay').style.display='none'" style="flex:1;padding:9px;border:1px solid var(--border);border-radius:var(--radius);background:transparent;cursor:pointer;font-family:inherit;font-size:12px;color:var(--txt2)">Abbrechen</button>
       <button onclick="saveApiKey()" style="flex:2;padding:9px;border:none;border-radius:var(--radius);background:var(--gold);cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;color:#fff">Speichern & starten</button>
@@ -3231,7 +3246,7 @@ showScreen('project');
 <!-- KI Analyse Overlay -->
 <div id="ki-overlay">
   <div id="ki-modal">
-    <h3>✦ KI-Erkennung <span class="ki-badge">ChatGPT Vision</span></h3>
+    <h3>✦ KI-Erkennung <span class="ki-badge">Claude Vision</span></h3>
     <div class="ki-status" id="ki-status">Analysiere Plan...</div>
     <div id="ki-ref-section" style="display:none">
       <div style="font-size:11px;font-weight:600;color:var(--txt2);margin-bottom:6px;letter-spacing:.5px">REFERENZPUNKT ERKANNT</div>
