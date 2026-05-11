@@ -243,9 +243,9 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
         <button class="tbtn confirm" id="btn-ref-confirm" style="display:none" onclick="confirmRef()">✓ Bestätigen</button>
         <button class="tbtn warn" id="btn-ref-reset" onclick="resetRef()">Ref löschen</button>
       </div>
-      <div class="tb-sep"></div>
-      <span class="tb-label">Raum</span>
-      <div class="tb-group">
+      <div class="tb-sep" id="sep-raum"></div>
+      <span class="tb-label" id="lbl-raum">Raum</span>
+      <div class="tb-group" id="grp-raum">
         <button class="tbtn" id="btn-add-room" onclick="activateDraw()">＋ Raum zeichnen</button>
         <button class="tbtn" id="btn-select" onclick="setTool('select')">Raum anpassen</button>
         <span id="btn-draw-active" style="display:none">✦ Zeichnen aktiv</span>
@@ -1947,7 +1947,7 @@ function selR(i){
 }
 async function deleteSelected(){if(selRoom===null)return;const rm=rooms[selRoom];if(rm.id)await deleteRoomFromDB(rm.id);rooms.splice(selRoom,1);selRoom=null;updStatus();updSidebar();syncDebugState();draw();}
 function undoPoint(){if(curPts.length>0){curPts.pop();updStatus();draw();}}
-function cancelDraw(){curPts=[];drag=null;hideMag();updStatus();draw();}
+function cancelDraw(){curPts=[];drag=null;snapInfo=null;mouseW=null;hoverPt=null;hoverEdge=null;hideMag();setTool('select');updStatus();draw();}
 async function resetRef(){
   if(!confirm('Referenzmaß wirklich löschen?'))return;
   if(viewMode==='schnitt'){
@@ -2033,9 +2033,15 @@ async function closeRef(ok){
     }
   }
   refConfirmed=(refPts.length===2 && !!scale);
-  // Fix 2: always keep scale alias in sync with the active view
+  // always keep scale alias in sync with the active view
   scale=viewMode==='schnitt'?scaleSchnitt:scaleGrundriss;
-  setTool('draw');updStatus();updSidebar();syncDebugState();draw();
+  // Im Schnitt-View: kein draw-Tool aktivieren, Schnitt-Draw-Button freischalten
+  if(viewMode==='schnitt'){
+    setTool('select');
+  } else {
+    setTool('draw');
+  }
+  updStatus();updSidebar();syncDebugState();draw();updToolbarLockState();
 }
 function openEntry(ri,mode){entryTarget={roomIdx:ri,mode};document.getElementById('entry-modal-title').textContent=mode==='abzug'?'Abzug hinzufügen':'Zusatzfläche hinzufügen';document.getElementById('e-name').value=mode==='abzug'?'Tür':'Stichwand';document.getElementById('e-b').value=mode==='abzug'?'0.90':'1.00';document.getElementById('e-h').value=mode==='abzug'?'2.00':'1.20';document.getElementById('e-n').value='1';document.getElementById('e-vob').checked=false;document.getElementById('vob-row').style.display=mode==='abzug'?'flex':'none';centerModal('mw-entry');setTimeout(()=>document.getElementById('e-name').focus(),50);}
 async function closeEntry(ok){
@@ -2334,7 +2340,7 @@ function clearLp(){if(lpTimer){clearTimeout(lpTimer);lpTimer=null;}}
 cv.addEventListener('pointerdown',e=>{
   if(e.pointerType==='mouse')return;e.preventDefault();cv.setPointerCapture(e.pointerId);activePtr[e.pointerId]=e;
   const ptrs=Object.values(activePtr);
-  if(ptrs.length===2){clearLp();hideMag();drag=null;dragRefIdx=null;isPanning=false;const t0=ptrs[0],t1=ptrs[1];pinchDist=Math.hypot(t1.clientX-t0.clientX,t1.clientY-t0.clientY);pinchMidX=(t0.clientX+t1.clientX)/2;pinchMidY=(t0.clientY+t1.clientY)/2;return;}
+  if(ptrs.length===2){clearLp();hideMag();drag=null;dragRefIdx=null;isPanning=false;lastPX=0;lastPY=0;const t0=ptrs[0],t1=ptrs[1];pinchDist=Math.hypot(t1.clientX-t0.clientX,t1.clientY-t0.clientY);pinchMidX=(t0.clientX+t1.clientX)/2;pinchMidY=(t0.clientY+t1.clientY)/2;return;}
   lpStartX=e.clientX;lpStartY=e.clientY;
   const w=toW(e.clientX,e.clientY);
   const ri=hitRefPoint(w.x,w.y);if(ri!==null){dragRefIdx=ri;return;}
@@ -2358,7 +2364,7 @@ cv.addEventListener('pointermove',e=>{
 },{passive:false});
 cv.addEventListener('pointerup',async e=>{
   if(e.pointerType==='mouse')return;e.preventDefault();const hadMag=magActive;clearLp();delete activePtr[e.pointerId];
-  if(Object.keys(activePtr).length<2)pinchDist=null;
+  if(Object.keys(activePtr).length<2){pinchDist=null;if(Object.keys(activePtr).length<1)isPanning=false;}
   if(dragRefIdx!==null){
     if(viewMode==='schnitt') refPtsSchnitt=[...refPts];
     else refPtsGrundriss=[...refPts];
@@ -2578,13 +2584,14 @@ function setView(v){
     if(suBtn)suBtn.style.display='none';
     schnittDrawMode=false;
   }
-  // Punkt 1: Raum-Werkzeuge nur im Grundriss sichtbar
-  const _addRoom=document.getElementById('btn-add-room');
-  const _selRoom=document.getElementById('btn-select');
-  const _sepRaum=document.querySelector('#tb-tools .tb-sep');
-  const _lblRaum=document.querySelector('#tb-tools .tb-label:nth-of-type(2)');
-  if(_addRoom)_addRoom.style.display=v==='schnitt'?'none':'';
-  if(_selRoom)_selRoom.style.display=v==='schnitt'?'none':'';
+  // Raum-Werkzeuge nur im Grundriss sichtbar
+  const _grpRaum=document.getElementById('grp-raum');
+  const _sepRaum=document.getElementById('sep-raum');
+  const _lblRaum=document.getElementById('lbl-raum');
+  const showRaum=v!=='schnitt';
+  if(_grpRaum)_grpRaum.style.display=showRaum?'':'none';
+  if(_sepRaum)_sepRaum.style.display=showRaum?'':'none';
+  if(_lblRaum)_lblRaum.style.display=showRaum?'':'none';
   draw();updStatus();updSidebar();syncDebugState();updToolbarLockState();
 }
 
@@ -2729,7 +2736,10 @@ function updToolbarLockState(){
       const b=document.getElementById(id);if(b)b.classList.toggle('tb-locked',!hasPlan);
     });
     const sdBtn=document.getElementById('btn-schnitt-draw');
-    if(sdBtn)sdBtn.classList.toggle('tb-locked',!hasRef);
+    if(sdBtn){
+      sdBtn.classList.toggle('tb-locked',!hasRef);
+      if(!schnittDrawMode)sdBtn.style.display=''; // ensure visible after REF set
+    }
     ['btn-select','btn-add-room'].forEach(id=>{
       const b=document.getElementById(id);if(b)b.classList.add('tb-locked');
     });
@@ -2740,9 +2750,12 @@ function updToolbarLockState(){
       const b=document.getElementById(id);if(b)b.classList.toggle('tb-locked',!hasPlan||!hasSchnitt);
     });
   } else {
-    const lockable=['btn-ref','btn-ref-reset','btn-select','btn-add-room'];
-    lockable.forEach(id=>{
+    ['btn-ref','btn-ref-reset'].forEach(id=>{
       const b=document.getElementById(id);if(b)b.classList.toggle('tb-locked',!hasPlan);
+    });
+    const hasRef=!!(scaleGrundriss);
+    ['btn-select','btn-add-room'].forEach(id=>{
+      const b=document.getElementById(id);if(b)b.classList.toggle('tb-locked',!hasPlan||!hasRef);
     });
   }
 }
