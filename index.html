@@ -232,8 +232,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
       <button class="tbtn" id="btn-gdr" onclick="setView('grundriss')" style="display:none">📐 Grundriss</button>
       <button class="tbtn" id="btn-sch" onclick="setView('schnitt')" style="display:none">✂ Schnitt</button>
       <div class="spacer"></div>
-      <button class="tbtn" id="btn-ki" onclick="startKIAnalyse()" style="display:none;background:linear-gradient(135deg,#6e3ff3,#2a7ab8);color:#fff;border-color:#6e3ff3;font-weight:600">✦ KI-Erkennung</button>
-      <button class="tbtn" id="btn-json-import" onclick="openJsonImport()" style="display:none;border-color:#6e3ff3;color:#6e3ff3;font-weight:600">↓ JSON Import</button>
+
       <button class="tbtn export" onclick="openExportModal()" id="btn-export" style="display:none">↓ PDF Export</button>
     </div>
     <!-- Zeile 2: Werkzeuge -->
@@ -363,7 +362,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 </div>
 
 <!-- Overlay for project/floor creation -->
-<div class="overlay" id="overlay" style="display:none" onclick="if(event.target===this)closeOverlay()">
+<div class="overlay" id="overlay" style="display:none">
   <div class="overlay-modal" id="overlay-modal">
     <h3 id="overlay-title">Neues Projekt</h3>
     <div id="overlay-body"></div>
@@ -1116,7 +1115,7 @@ window.__AUFMASS_BUILD='v41';
 function toW(cx,cy){const r=cv.getBoundingClientRect();return{x:(cx-r.left-panX)/zoom,y:(cy-r.top-panY)/zoom};}
 
 // ── SNAP ───────────────────────────────────────────────────
-function snapPts(wx,wy){const all=[...curPts];for(const rm of rooms)for(const p of rm.points)all.push(p);for(const p of all){if(Math.hypot(wx-p.x,wy-p.y)<SNAP_PT/zoom)return{x:p.x,y:p.y,type:'point'};}return null;}
+function snapPts(wx,wy){for(const p of curPts){if(Math.hypot(wx-p.x,wy-p.y)<SNAP_PT/zoom)return{x:p.x,y:p.y,type:'point'};}if(curPts.length>=1){for(const rm of rooms)for(const p of rm.points){if(Math.hypot(wx-p.x,wy-p.y)<SNAP_PT/zoom)return{x:p.x,y:p.y,type:'point'};}}return null;}
 function snapLines(wx,wy){let best=null,bestD=SNAP_LINE/zoom;for(const rm of rooms){const pts=rm.points,n=pts.length;for(let i=0;i<n;i++){const s=projSeg(wx,wy,pts[i],pts[(i+1)%n]);if(s.d<bestD){bestD=s.d;best={x:s.x,y:s.y,type:'line'};}}}return best;}
 function getSnap(wx,wy){return snapPts(wx,wy)||snapLines(wx,wy)||{x:wx,y:wy,type:null};}
 function projSeg(px,py,a,b){const abx=b.x-a.x,aby=b.y-a.y,len2=abx*abx+aby*aby;if(len2<.0001)return{x:a.x,y:a.y,d:Math.hypot(px-a.x,py-a.y)};const t=Math.max(0,Math.min(1,((px-a.x)*abx+(py-a.y)*aby)/len2));return{x:a.x+t*abx,y:a.y+t*aby,d:Math.hypot(px-(a.x+t*abx),py-(a.y+t*aby))};}
@@ -2324,7 +2323,7 @@ cv.addEventListener('wheel',e=>{
   const isPinch=e.ctrlKey;
   const raw=e.deltaMode===1?e.deltaY*20:e.deltaY;
   const factor=isPinch?raw*0.008:raw*0.0004;
-  const nz=Math.min(Math.max(zoom*(1-factor),.15),12);
+  const nz=Math.min(Math.max(zoom*(1-factor),.15),40);
   const r=cv.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
   panX=mx-(mx-panX)*(nz/zoom);panY=my-(my-panY)*(nz/zoom);
   zoom=nz;draw();updStatus();
@@ -2349,7 +2348,7 @@ cv.addEventListener('pointerdown',e=>{
 cv.addEventListener('pointermove',e=>{
   if(e.pointerType==='mouse')return;e.preventDefault();activePtr[e.pointerId]=e;
   const ptrs=Object.values(activePtr);
-  if(ptrs.length===2&&pinchDist!==null){const t0=ptrs[0],t1=ptrs[1],nd=Math.hypot(t1.clientX-t0.clientX,t1.clientY-t0.clientY),nz=Math.min(Math.max(zoom*(nd/pinchDist),.1),12);panX=pinchMidX-(pinchMidX-panX)*(nz/zoom);panY=pinchMidY-(pinchMidY-panY)*(nz/zoom);zoom=nz;pinchDist=nd;draw();updStatus();return;}
+  if(ptrs.length===2&&pinchDist!==null){const t0=ptrs[0],t1=ptrs[1],nd=Math.hypot(t1.clientX-t0.clientX,t1.clientY-t0.clientY),nz=Math.min(Math.max(zoom*(nd/pinchDist),.1),40);const r=cv.getBoundingClientRect();const lx=pinchMidX-r.left,ly=pinchMidY-r.top;panX=lx-(lx-panX)*(nz/zoom);panY=ly-(ly-panY)*(nz/zoom);zoom=nz;pinchDist=nd;draw();updStatus();return;}
   const moved=Math.hypot(e.clientX-lpStartX,e.clientY-lpStartY);const w=toW(e.clientX,e.clientY);
   if(dragRefIdx!==null){refPts[dragRefIdx]={x:w.x,y:w.y};draw();return;}
   if(drag){rooms[drag.roomIdx].points[drag.ptIdx]={x:w.x,y:w.y};updSidebar();draw();return;}
@@ -2746,11 +2745,6 @@ function updToolbarLockState(){
       const b=document.getElementById(id);if(b)b.classList.toggle('tb-locked',!hasPlan);
     });
   }
-  // KI + JSON Import Button einblenden sobald Plan geladen
-  const kiBtn=document.getElementById('btn-ki');
-  if(kiBtn)kiBtn.style.display=hasPlan?'':'none';
-  const jiBtn=document.getElementById('btn-json-import');
-  if(jiBtn)jiBtn.style.display=hasPlan?'':'none';
 }
 
 // ── KI-ERKENNUNG ────────────────────────────────────────────
