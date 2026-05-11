@@ -1719,7 +1719,7 @@ function updStatus(){
       document.getElementById('st-m').textContent=scaleSchnitt?'Kalibriert ✓ – Schnitt zeichnen':'Zuerst Referenzmaß setzen';
     }
     document.getElementById('btn-ref-confirm').style.display=refReady?'':'none';
-    document.getElementById('btn-del').style.display='none';
+    const _bd=document.getElementById('btn-del');if(_bd)_bd.style.display='none';
     document.getElementById('btn-undo').style.display='none';
     document.getElementById('btn-close').style.display='none';
     document.getElementById('btn-esc').style.display='none';
@@ -1727,7 +1727,7 @@ function updStatus(){
     return;
   }
   document.getElementById('st-m').textContent=msgs[tool]||'';
-  document.getElementById('btn-del').style.display=selRoom!==null?'':'none';
+  const _bd2=document.getElementById('btn-del');if(_bd2)_bd2.style.display=selRoom!==null?'':'none';
   document.getElementById('btn-undo').style.display=(tool==='draw'&&curPts.length>0)?'':'none';
   document.getElementById('btn-close').style.display=(tool==='draw'&&can3)?'':'none';
   document.getElementById('btn-esc').style.display=(tool==='draw'&&curPts.length>0)?'':'none';
@@ -2538,6 +2538,17 @@ async function showPage(pageNum,isSchnitt=false){
     await savePlanSnapshot(dataUrl,false,pageNum);
   }
   updPageNav();draw();updToolbarLockState();
+  // Re-sync button visibility for current view after any plan load
+  if(viewMode==='schnitt'||viewMode==='grundriss'){
+    const _sd=document.getElementById('btn-schnitt-draw');
+    const _se=document.getElementById('btn-schnitt-edit');
+    const _hasS=schnittPts.length>=5;
+    if(viewMode==='schnitt'&&_sd&&!schnittDrawMode){
+      _sd.style.display=_hasS?'none':'';
+      if(_se)_se.style.display=_hasS?'':'none';
+    }
+    if(viewMode==='grundriss'&&_sd)_sd.style.display='none';
+  }
 }
 
 function updPageNav(){
@@ -2857,9 +2868,15 @@ function updToolbarLockState(){
       const b=document.getElementById(id);if(b)b.classList.toggle('tb-locked',!hasPlan);
     });
     const sdBtn=document.getElementById('btn-schnitt-draw');
+    const seBtn2=document.getElementById('btn-schnitt-edit');
+    const hasSchnittPts=schnittPts.length>=5;
     if(sdBtn){
       sdBtn.classList.toggle('tb-locked',!hasRef);
-      if(!schnittDrawMode)sdBtn.style.display=''; // ensure visible after REF set
+      // Ensure correct display: show draw btn if no existing schnitt, show edit if exists
+      if(!schnittDrawMode){
+        sdBtn.style.display=hasSchnittPts?'none':'';
+        if(seBtn2)seBtn2.style.display=hasSchnittPts?'':'none';
+      }
     }
     ['btn-add-room'].forEach(id=>{
       const b=document.getElementById(id);if(b)b.classList.add('tb-locked');
