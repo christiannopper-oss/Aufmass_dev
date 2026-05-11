@@ -1707,7 +1707,7 @@ function updStatus(){
   const msgs={
     select:'Punkt=verschieben · Kante=einfügen',
     ref:refPts.length===0?'Punkt 1 setzen (lang drücken=Lupe)':refPts.length===1?'Punkt 2 setzen':refConfirmed?'Kalibriert':'Punkte prüfen → ✓ Bestätigen',
-    draw:!curPts.length?'Klicken':!can3?curPts.length+' Punkte — mind. 3':'Roten Kreis = schließen',
+    draw:!curPts.length?'Klicken — Leertaste+Drag oder Scroll zum Navigieren':!can3?curPts.length+' Punkte — mind. 3 · Leertaste+Drag = Navigieren':'Roten Kreis = schließen',
     trauf:'Traufseite: Kante antippen zum Markieren/Entfernen'
   };
   if(viewMode==='schnitt'){
@@ -2370,9 +2370,17 @@ cv.addEventListener('mouseup',async e=>{
 cv.addEventListener('contextmenu',e=>{e.preventDefault();if(tool==='draw'&&curPts.length>0){curPts.pop();updStatus();draw();}});
 cv.addEventListener('wheel',e=>{
   e.preventDefault();
-  const isPinch=e.ctrlKey;
+  const isPinch=e.ctrlKey; // ctrlKey = trackpad pinch or Ctrl+scroll = zoom
+  if(!isPinch){
+    // Two-finger trackpad scroll OR regular scroll wheel → pan the canvas
+    const dx=e.deltaMode===1?e.deltaX*20:e.deltaX;
+    const dy=e.deltaMode===1?e.deltaY*20:e.deltaY;
+    panX-=dx;panY-=dy;draw();updStatus();
+    return;
+  }
+  // Pinch/zoom
   const raw=e.deltaMode===1?e.deltaY*20:e.deltaY;
-  const factor=isPinch?raw*0.008:raw*0.0004;
+  const factor=raw*0.008;
   const nz=Math.min(Math.max(zoom*(1-factor),.15),40);
   const r=cv.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
   panX=mx-(mx-panX)*(nz/zoom);panY=my-(my-panY)*(nz/zoom);
