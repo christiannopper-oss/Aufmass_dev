@@ -247,12 +247,12 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
       <span class="tb-label" id="lbl-raum">Raum</span>
       <div class="tb-group" id="grp-raum">
         <button class="tbtn" id="btn-add-room" onclick="activateDraw()">＋ Raum zeichnen</button>
-        <button class="tbtn" id="btn-select" onclick="setTool('select')">Raum anpassen</button>
+
         <span id="btn-draw-active" style="display:none">✦ Zeichnen aktiv</span>
         <button class="tbtn" id="btn-undo" style="display:none" onclick="undoPoint()">↩ Punkt löschen</button>
         <button class="tbtn confirm" id="btn-close" style="display:none" onclick="openRoomModal()">✓ Raum speichern</button>
         <button class="tbtn danger" id="btn-esc" style="display:none" onclick="cancelDraw()">✕ Abbrechen</button>
-        <button class="tbtn danger" id="btn-del" style="display:none" onclick="deleteSelected()">🗑 Löschen</button>
+
       </div>
       <!-- Dach-spezifische Werkzeuge -->
       <div class="tb-sep" id="sep-dach" style="display:none"></div>
@@ -433,6 +433,8 @@ let refLengthSchnittM=null;     // reales Referenzmaß in m (geräteunabhängig)
 let selRoom=null,pendingPts=null;
 let isPanning=false,lastPX=0,lastPY=0;
 let drag=null,hoverPt=null,hoverEdge=null;
+let dragSchnittIdx=null; // index of schnitt point being dragged
+let drawDragIdx=null; // index in curPts being repositioned right after placement
 let lpTimer=null,lpStartX=0,lpStartY=0,magActive=false,magWorldPos=null;
 const activePtr={};
 let pinchDist=null,pinchMidX=0,pinchMidY=0;
@@ -648,7 +650,7 @@ async function openFloor(id){
   // Wait until the canvas has real dimensions before denormalizing points.
   // Poll with rAF instead of a fixed timeout – safe on slow devices and large PDFs.
   // Lock toolbar immediately while plan is loading
-  ['btn-ref','btn-ref-reset','btn-select','btn-add-room'].forEach(id=>{
+  ['btn-ref','btn-ref-reset','btn-add-room'].forEach(id=>{
     const b=document.getElementById(id);if(b)b.classList.add('tb-locked');
   });
   await new Promise(resolve=>{
@@ -1121,11 +1123,20 @@ function toW(cx,cy){const r=cv.getBoundingClientRect();return{x:(cx-r.left-panX)
 // ── SNAP ───────────────────────────────────────────────────
 function snapPts(wx,wy){for(const p of curPts){if(Math.hypot(wx-p.x,wy-p.y)<SNAP_PT/zoom)return{x:p.x,y:p.y,type:'point'};}if(curPts.length>=1){for(const rm of rooms)for(const p of rm.points){if(Math.hypot(wx-p.x,wy-p.y)<SNAP_PT/zoom)return{x:p.x,y:p.y,type:'point'};}}return null;}
 function snapLines(wx,wy){let best=null,bestD=SNAP_LINE/zoom;for(const rm of rooms){const pts=rm.points,n=pts.length;for(let i=0;i<n;i++){const s=projSeg(wx,wy,pts[i],pts[(i+1)%n]);if(s.d<bestD){bestD=s.d;best={x:s.x,y:s.y,type:'line'};}}}return best;}
-function getSnap(wx,wy){return snapPts(wx,wy)||snapLines(wx,wy)||{x:wx,y:wy,type:null};}
+function getSnap(wx,wy){
+  // While drawing a new room: only snap to own current points (for closing).
+  // No snap to existing rooms – avoids confusing ghost suggestions.
+  if(tool==='draw'){
+    for(const p of curPts){if(Math.hypot(wx-p.x,wy-p.y)<SNAP_PT/zoom)return{x:p.x,y:p.y,type:'point'};}
+    return{x:wx,y:wy,type:null};
+  }
+  return snapPts(wx,wy)||snapLines(wx,wy)||{x:wx,y:wy,type:null};
+}
 function projSeg(px,py,a,b){const abx=b.x-a.x,aby=b.y-a.y,len2=abx*abx+aby*aby;if(len2<.0001)return{x:a.x,y:a.y,d:Math.hypot(px-a.x,py-a.y)};const t=Math.max(0,Math.min(1,((px-a.x)*abx+(py-a.y)*aby)/len2));return{x:a.x+t*abx,y:a.y+t*aby,d:Math.hypot(px-(a.x+t*abx),py-(a.y+t*aby))};}
 function isClosing(wx,wy){return curPts.length>=3&&Math.hypot(wx-curPts[0].x,wy-curPts[0].y)<SNAP_CLOSE/zoom;}
 function hitPoint(wx,wy){if(tool!=='select')return null;const r=PT_HIT/zoom;const order=selRoom!==null?[selRoom,...rooms.map((_,i)=>i).filter(i=>i!==selRoom)]:rooms.map((_,i)=>i);for(const ri of order){const pts=rooms[ri].points;for(let i=0;i<pts.length;i++){if(Math.hypot(wx-pts[i].x,wy-pts[i].y)<r)return{roomIdx:ri,ptIdx:i};}}return null;}
 function hitEdge(wx,wy){if(tool!=='select')return null;const r=EDGE_HIT/zoom;const order=selRoom!==null?[selRoom,...rooms.map((_,i)=>i).filter(i=>i!==selRoom)]:rooms.map((_,i)=>i);for(const ri of order){const pts=rooms[ri].points,n=pts.length;for(let i=0;i<n;i++){const s=projSeg(wx,wy,pts[i],pts[(i+1)%n]);if(s.d<r&&Math.hypot(wx-pts[i].x,wy-pts[i].y)>PT_HIT/zoom&&Math.hypot(wx-pts[(i+1)%n].x,wy-pts[(i+1)%n].y)>PT_HIT/zoom)return{roomIdx:ri,edgeIdx:i,x:s.x,y:s.y};}}return null;}
+function hitSchnittPoint(wx,wy){const r=PT_HIT/zoom;for(let i=0;i<schnittPts.length;i++){if(Math.hypot(wx-schnittPts[i].x,wy-schnittPts[i].y)<r)return i;}return null;}
 
 // ── GEOMETRY ───────────────────────────────────────────────
 function polyArea(pts){let a=0,n=pts.length;for(let i=0;i<n;i++){const j=(i+1)%n;a+=pts[i].x*pts[j].y-pts[j].x*pts[i].y;}return Math.abs(a/2);}
@@ -1882,6 +1893,7 @@ function updSidebar(){
       :`<span style="font-size:10px;color:var(--txt3);opacity:.6">Kalibrierung fehlt</span>`;
     return`<div class="rc${sel?' sel':''}" onclick="selR(${i})">
       <div class="rn"><span>${rm.name}</span><div style="display:flex;gap:4px">
+        <button class="edit-btn" title="Punkte bearbeiten" onclick="activateSelectForRoom(${i});event.stopPropagation()">⊹</button>
         <button class="edit-btn" onclick="openEditRoom(${i});event.stopPropagation()">✎</button>
         <button class="edit-btn" style="border-color:#c0392b33;color:#c0392b" onclick="delRoomByIdx(${i});event.stopPropagation()">✕</button>
       </div></div>
@@ -1930,7 +1942,7 @@ function activateDraw(){
   setTool('draw');
 }
 function setTool(t){tool=t;
-  ['select','ref'].forEach(id=>{const b=document.getElementById('btn-'+id);if(b)b.classList.toggle('active',id===t);});
+  ['ref'].forEach(id=>{const b=document.getElementById('btn-'+id);if(b)b.classList.toggle('active',id===t);});
   const addBtn=document.getElementById('btn-add-room');
   if(addBtn)addBtn.style.display=t==='draw'?'none':'';
   const drawInd=document.getElementById('btn-draw-active');
@@ -1951,6 +1963,13 @@ function selR(i){
 }
 async function deleteSelected(){if(selRoom===null)return;const rm=rooms[selRoom];if(rm.id)await deleteRoomFromDB(rm.id);rooms.splice(selRoom,1);selRoom=null;updStatus();updSidebar();syncDebugState();draw();}
 async function delRoomByIdx(i){if(i<0||i>=rooms.length)return;const rm=rooms[i];if(!confirm('Raum "'+rm.name+'" wirklich löschen?'))return;if(rm.id)await deleteRoomFromDB(rm.id);rooms.splice(i,1);if(selRoom===i)selRoom=null;else if(selRoom>i)selRoom--;updStatus();updSidebar();syncDebugState();draw();}
+function activateSelectForRoom(i){
+  selRoom=i;
+  setTool('select');
+  updStatus();updSidebar();syncDebugState();draw();
+  // scroll room into view
+  setTimeout(()=>{const els=document.querySelectorAll('.rc');if(els[i])els[i].scrollIntoView({behavior:'smooth',block:'nearest'});},50);
+}
 function undoPoint(){if(curPts.length>0){curPts.pop();updStatus();draw();}}
 function cancelDraw(){curPts=[];drag=null;snapInfo=null;mouseW=null;hoverPt=null;hoverEdge=null;hideMag();setTool('select');updStatus();draw();}
 async function resetRef(){
@@ -2147,7 +2166,19 @@ function generatePDF(project,client,author,opts={}){
   const pageCount=doc.getNumberOfPages();for(let p=1;p<=pageCount;p++){doc.setPage(p);doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor(150,150,150);doc.text('Aufmaß-App · Seite '+p+' von '+pageCount,W/2,H-8,{align:'center'});doc.line(ML,H-12,W-MR,H-12);}
   const fname2=(project.replace(/\s+/g,'-')||'Aufmass')+'-'+new Date().toISOString().slice(0,10)+'.pdf';
   const blob2=doc.output('blob');const url2=URL.createObjectURL(blob2);
-  const a2=document.createElement('a');a2.href=url2;a2.download=fname2;document.body.appendChild(a2);a2.click();setTimeout(()=>{URL.revokeObjectURL(url2);a2.remove();},2000);
+  const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1;
+  if(isIOS){
+    const w=window.open(url2,'_blank');
+    if(!w){alert('PDF erzeugt. Bitte Pop-ups erlauben oder PDF manuell speichern.');}
+    else{setTimeout(()=>URL.revokeObjectURL(url2),10000);}
+    // Show save hint overlay
+    const hint=document.createElement('div');
+    hint.style.cssText='position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#f0e6d0;padding:12px 20px;border-radius:10px;font-size:13px;z-index:9999;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+    hint.textContent='PDF geöffnet → Teilen-Symbol → „In Dateien sichern"';
+    document.body.appendChild(hint);setTimeout(()=>hint.remove(),5000);
+  } else {
+    const a2=document.createElement('a');a2.href=url2;a2.download=fname2;document.body.appendChild(a2);a2.click();setTimeout(()=>{URL.revokeObjectURL(url2);a2.remove();},2000);
+  }
 }
 
 // keyboard
@@ -2173,6 +2204,7 @@ document.addEventListener('keyup',e=>{if(e.code==='Space'){spaceDown=false;cv.st
 
 // ── TAP HANDLER ────────────────────────────────────────────
 function handleTap(wx,wy){
+  drawDragIdx=null; // clear any pending point drag from previous tap
   if(viewMode==='schnitt'){
     if(schnittDrawMode&&tool!=='ref'){
       // Close polygon if clicking near first point (like rooms)
@@ -2264,7 +2296,7 @@ function handleTap(wx,wy){
     }
     draw();return;
   }
-  if(tool==='draw'){if(isClosing(wx,wy)){mouseW=null;snapInfo=null;openRoomModal();return;}const s=getSnap(wx,wy);curPts.push({x:s.x,y:s.y});updStatus();draw();}
+  if(tool==='draw'){if(isClosing(wx,wy)){mouseW=null;snapInfo=null;openRoomModal();return;}const s=getSnap(wx,wy);curPts.push({x:s.x,y:s.y});drawDragIdx=curPts.length-1;updStatus();draw();}
 }
 
 // ref point dragging (before confirmation)
@@ -2279,6 +2311,8 @@ let dragRefIdx=null;
 // ── MOUSE ─────────────────────────────────────────────────
 cv.addEventListener('mousemove',e=>{
   if(dragRefIdx!==null){const w=toW(e.clientX,e.clientY);refPts[dragRefIdx]={x:w.x,y:w.y};draw();return;}
+  if(dragSchnittIdx!==null){const w=toW(e.clientX,e.clientY);schnittPts[dragSchnittIdx]={x:w.x,y:w.y};draw();return;}
+  if(drawDragIdx!==null){const w=toW(e.clientX,e.clientY);curPts[drawDragIdx]={x:w.x,y:w.y};draw();return;}
   if(drag){const w=toW(e.clientX,e.clientY);rooms[drag.roomIdx].points[drag.ptIdx]={x:w.x,y:w.y};updSidebar();draw();return;}
   if(isPanning){panX+=e.clientX-lastPX;panY+=e.clientY-lastPY;lastPX=e.clientX;lastPY=e.clientY;draw();updStatus();return;}
   const w=toW(e.clientX,e.clientY);mouseW=w;
@@ -2317,6 +2351,7 @@ cv.addEventListener('mousedown',e=>{
   if(e.button!==0)return;
   const w=toW(e.clientX,e.clientY);
   const ri=hitRefPoint(w.x,w.y);if(ri!==null){dragRefIdx=ri;cv.style.cursor='grabbing';return;}
+  if(viewMode==='schnitt'&&schnittPts.length>0){const si=hitSchnittPoint(w.x,w.y);if(si!==null){dragSchnittIdx=si;cv.style.cursor='grabbing';return;}}
   if(tool==='select'){const pt=hitPoint(w.x,w.y);if(pt){drag=pt;cv.style.cursor='grabbing';return;}const ed=hitEdge(w.x,w.y);if(ed){rooms[ed.roomIdx].points.splice(ed.edgeIdx+1,0,{x:ed.x,y:ed.y});drag={roomIdx:ed.roomIdx,ptIdx:ed.edgeIdx+1};cv.style.cursor='grabbing';updSidebar();draw();return;}}
   handleTap(w.x,w.y);
 });
@@ -2326,6 +2361,8 @@ cv.addEventListener('mouseup',async e=>{
     else refPtsGrundriss=[...refPts];
     dragRefIdx=null;updSidebar();draw();saveFloorState();scheduleSave();return;
   }
+  if(dragSchnittIdx!==null){dragSchnittIdx=null;schnittClosed=schnittPts.length>=5;scheduleSave();draw();cv.style.cursor='default';return;}
+  if(drawDragIdx!==null){drawDragIdx=null;draw();return;}
   if(drag){const rm=rooms[drag.roomIdx];await saveRoom(rm);drag=null;updSidebar();draw();}
   isPanning=false;
 });
@@ -2359,9 +2396,12 @@ cv.addEventListener('pointerdown',e=>{
   lpStartX=e.clientX;lpStartY=e.clientY;
   const w=toW(e.clientX,e.clientY);
   const ri=hitRefPoint(w.x,w.y);if(ri!==null){dragRefIdx=ri;return;}
+  if(viewMode==='schnitt'&&schnittPts.length>0){const si=hitSchnittPoint(w.x,w.y);if(si!==null){dragSchnittIdx=si;return;}}
   if(tool==='select'){const pt=hitPoint(w.x,w.y);if(pt){drag=pt;return;}}
-  isPanning=false;
-  if(tool==='draw'||tool==='ref'||schnittDrawMode){
+  // In select mode with no drag target: start panning immediately
+  if(tool==='select'&&drag===null&&dragRefIdx===null&&dragSchnittIdx===null){
+    isPanning=true;
+  } else if(tool==='draw'||tool==='ref'||schnittDrawMode){
     lpTimer=setTimeout(()=>{lpTimer=null;const ww=toW(lpStartX,lpStartY);const s=getSnap(ww.x,ww.y);showMag(lpStartX,lpStartY,s.x,s.y);},LP_MS);
   }
 },{passive:false});
@@ -2371,6 +2411,8 @@ cv.addEventListener('pointermove',e=>{
   if(ptrs.length===2&&pinchDist!==null){const t0=ptrs[0],t1=ptrs[1],nd=Math.hypot(t1.clientX-t0.clientX,t1.clientY-t0.clientY),nz=Math.min(Math.max(zoom*(nd/pinchDist),.1),40);const r=cv.getBoundingClientRect();const lx=pinchMidX-r.left,ly=pinchMidY-r.top;panX=lx-(lx-panX)*(nz/zoom);panY=ly-(ly-panY)*(nz/zoom);zoom=nz;pinchDist=nd;draw();updStatus();return;}
   const moved=Math.hypot(e.clientX-lpStartX,e.clientY-lpStartY);const w=toW(e.clientX,e.clientY);
   if(dragRefIdx!==null){refPts[dragRefIdx]={x:w.x,y:w.y};draw();return;}
+  if(dragSchnittIdx!==null){schnittPts[dragSchnittIdx]={x:w.x,y:w.y};draw();return;}
+  if(drawDragIdx!==null){curPts[drawDragIdx]={x:w.x,y:w.y};draw();return;}
   if(drag){rooms[drag.roomIdx].points[drag.ptIdx]={x:w.x,y:w.y};updSidebar();draw();return;}
   if(magActive){const s=getSnap(w.x,w.y);magWorldPos={x:s.x,y:s.y};showMag(e.clientX,e.clientY,s.x,s.y);draw();return;}
   if(lpTimer&&moved>MOVE_THR){clearLp();isPanning=true;}
@@ -2393,13 +2435,15 @@ cv.addEventListener('pointerup',async e=>{
     else refPtsGrundriss=[...refPts];
     dragRefIdx=null;updSidebar();draw();isPanning=false;saveFloorState();scheduleSave();return;
   }
+  if(dragSchnittIdx!==null){dragSchnittIdx=null;schnittClosed=schnittPts.length>=5;scheduleSave();draw();return;}
+  if(drawDragIdx!==null){drawDragIdx=null;draw();return;}
   if(drag){const rm=rooms[drag.roomIdx];await saveRoom(rm);drag=null;updSidebar();draw();isPanning=false;return;}
   isPanning=false;
   if(hadMag){const pos=magWorldPos;hideMag();if(pos)handleTap(pos.x,pos.y);return;}
   const moved=Math.hypot(e.clientX-lpStartX,e.clientY-lpStartY);
   if(moved<MOVE_THR){const w=toW(e.clientX,e.clientY);if(tool==='select'){const ed=hitEdge(w.x,w.y);if(ed){rooms[ed.roomIdx].points.splice(ed.edgeIdx+1,0,{x:ed.x,y:ed.y});updSidebar();draw();return;}}handleTap(w.x,w.y);}
 },{passive:false});
-cv.addEventListener('pointercancel',e=>{delete activePtr[e.pointerId];clearLp();hideMag();drag=null;dragRefIdx=null;isPanning=false;pinchDist=null;});
+cv.addEventListener('pointercancel',e=>{delete activePtr[e.pointerId];clearLp();hideMag();drag=null;dragRefIdx=null;dragSchnittIdx=null;drawDragIdx=null;isPanning=false;pinchDist=null;});
 // Track last touch end to suppress iOS synthetic mouse events
 let lastTouchEnd=0;
 cv.addEventListener('pointerup',e=>{if(e.pointerType!=='mouse')lastTouchEnd=Date.now();},{passive:true,capture:true});
@@ -2809,7 +2853,7 @@ function updToolbarLockState(){
       sdBtn.classList.toggle('tb-locked',!hasRef);
       if(!schnittDrawMode)sdBtn.style.display=''; // ensure visible after REF set
     }
-    ['btn-select','btn-add-room'].forEach(id=>{
+    ['btn-add-room'].forEach(id=>{
       const b=document.getElementById(id);if(b)b.classList.add('tb-locked');
     });
   } else if(isDach && viewMode==='grundriss'){
@@ -2819,7 +2863,7 @@ function updToolbarLockState(){
       const b=document.getElementById(id);if(b)b.classList.toggle('tb-locked',!hasPlan);
     });
     // draw/select: need both plan AND completed schnitt
-    ['btn-select','btn-add-room'].forEach(id=>{
+    ['btn-add-room'].forEach(id=>{
       const b=document.getElementById(id);if(b)b.classList.toggle('tb-locked',!hasPlan||!hasSchnitt);
     });
   } else {
@@ -2827,7 +2871,7 @@ function updToolbarLockState(){
       const b=document.getElementById(id);if(b)b.classList.toggle('tb-locked',!hasPlan);
     });
     const hasRef=!!(scaleGrundriss);
-    ['btn-select','btn-add-room'].forEach(id=>{
+    ['btn-add-room'].forEach(id=>{
       const b=document.getElementById(id);if(b)b.classList.toggle('tb-locked',!hasPlan||!hasRef);
     });
   }
