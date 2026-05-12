@@ -796,35 +796,30 @@ function generateProjectPDF(project,allFloorRooms){
   let y=MT;
   // Header
   doc.setFillColor(22,22,22);doc.rect(0,0,W,32,'F');
-  // Logo D als Bild im PDF
+  // Logo D direkt auf Canvas zeichnen (kein async nötig)
   try{
-    const logoSvg=`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 60 60">
-      <rect width="60" height="60" rx="13" fill="#b8842a"/>
-      <path d="M13 46 L13 22 L30 38 L47 22 L47 46" stroke="#1a1a1a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-      <path d="M30 38 L30 14 M25 19 L30 14 L35 19" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>`;
-    const logoBlob=new Blob([logoSvg],{type:'image/svg+xml'});
-    const logoUrl=URL.createObjectURL(logoBlob);
-    await new Promise(res=>{
-      const img=new Image();
-      img.onload=()=>{
-        const c=document.createElement('canvas');c.width=80;c.height=80;
-        const cx=c.getContext('2d');cx.drawImage(img,0,0,80,80);
-        doc.addImage(c.toDataURL('image/png'),ML,y+2,9,9);
-        URL.revokeObjectURL(logoUrl);res();
-      };
-      img.onerror=()=>{URL.revokeObjectURL(logoUrl);res();};
-      img.src=logoUrl;
-    });
-    doc.setTextColor(200,169,110);doc.setFontSize(18);doc.setFont('helvetica','bold');
-    doc.text('meas',ML+11,y+10);
-    const measW=doc.getTextWidth('meas');
-    doc.setFont('helvetica','normal');doc.setFontSize(18);doc.setTextColor(160,130,70);
-    doc.text('up',ML+11+measW,y+10);
-  }catch(e){
-    doc.setTextColor(200,169,110);doc.setFontSize(18);doc.setFont('helvetica','bold');
-    doc.text('measup',ML,y+10);
-  }
+    const lc=document.createElement('canvas');lc.width=80;lc.height=80;
+    const lx=lc.getContext('2d');
+    // Rounded rect background
+    const r=17;lx.fillStyle='#b8842a';
+    lx.beginPath();lx.moveTo(r,0);lx.lineTo(80-r,0);lx.quadraticCurveTo(80,0,80,r);
+    lx.lineTo(80,80-r);lx.quadraticCurveTo(80,80,80-r,80);
+    lx.lineTo(r,80);lx.quadraticCurveTo(0,80,0,80-r);
+    lx.lineTo(0,r);lx.quadraticCurveTo(0,0,r,0);lx.closePath();lx.fill();
+    // M shape
+    lx.strokeStyle='#1a1a1a';lx.lineWidth=4.5;lx.lineCap='round';lx.lineJoin='round';
+    lx.beginPath();lx.moveTo(17,61);lx.lineTo(17,29);lx.lineTo(40,50);lx.lineTo(63,29);lx.lineTo(63,61);lx.stroke();
+    // Arrow up
+    lx.strokeStyle='#ffffff';lx.lineWidth=3.5;
+    lx.beginPath();lx.moveTo(40,50);lx.lineTo(40,18);lx.stroke();
+    lx.beginPath();lx.moveTo(33,25);lx.lineTo(40,18);lx.lineTo(47,25);lx.stroke();
+    doc.addImage(lc.toDataURL('image/png'),ML,y+1,10,10);
+  }catch(e){}
+  doc.setTextColor(200,169,110);doc.setFontSize(18);doc.setFont('helvetica','bold');
+  doc.text('meas',ML+12,y+10);
+  const measW=doc.getTextWidth('meas');
+  doc.setFont('helvetica','normal');doc.setFontSize(18);doc.setTextColor(160,130,70);
+  doc.text('up',ML+12+measW,y+10);
   doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(150,140,120);
   doc.text(new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}),W-MR,y+10,{align:'right'});
   doc.setFontSize(13);doc.setFont('helvetica','bold');doc.setTextColor(240,230,208);
