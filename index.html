@@ -377,7 +377,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
       </div>
 
       <!-- export modal -->
-      <div class="mwrap" id="mw-export" style="display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:300">
+      <div class="mwrap" id="mw-export" style="display:none;left:40px;top:60px">
         <div class="modal" style="min-width:300px;width:min(380px,92vw);max-height:80dvh;display:flex;flex-direction:column"><div class="mdrag" id="md-export"><span class="mtitle">PDF Export</span><span style="font-size:9px;color:var(--txt3)">ZIEHEN</span></div>
         <div class="mbody" style="overflow-y:auto;flex:1">
           <label>PROJEKTBEZEICHNUNG</label><input id="exp-project" placeholder="z.B. EFH Musterstraße 1">
@@ -2117,7 +2117,18 @@ function confirmRef(){
   updStatus();draw();
 }
 
-function centerModal(id){const wr=wrap.getBoundingClientRect();const mw=document.getElementById(id);mw.style.left=Math.max(10,wr.width/2-145)+'px';mw.style.top=Math.max(10,wr.height/3-80)+'px';mw.style.display='block';}
+function centerModal(id){
+  const wr=wrap.getBoundingClientRect();
+  const mw=document.getElementById(id);
+  mw.style.display='block';
+  // For export modal: center vertically too, accounting for larger size
+  const mh=mw.offsetHeight||400;
+  const mw2=mw.offsetWidth||340;
+  const left=Math.max(10,Math.min(wr.width-mw2-10, wr.width/2-mw2/2));
+  const top=Math.max(10,Math.min(wr.height-mh-10, wr.height/2-mh/2));
+  mw.style.left=left+'px';
+  mw.style.top=top+'px';
+}
 function openRoomModal(){
   if(curPts.length<3)return;
   editRoomIdx=null;pendingPts=[...curPts];
@@ -2194,7 +2205,7 @@ async function closeEntry(ok){
 }
 
 // ── EXPORT ─────────────────────────────────────────────────
-function openExportModal(){document.getElementById('mw-export').style.display='';setTimeout(()=>document.getElementById('exp-project').focus(),50);}
+function openExportModal(){centerModal('mw-export');setTimeout(()=>document.getElementById('exp-project').focus(),50);}
 function closeExport(ok){
   document.getElementById('mw-export').style.display='none';
   if(!ok)return;
