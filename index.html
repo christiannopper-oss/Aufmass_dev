@@ -573,17 +573,26 @@ function showScreen(name){
   document.getElementById('project-screen').style.display=name==='project'?'flex':'none';
   document.getElementById('floor-screen').style.display=name==='floor'?'flex':'none';
   document.getElementById('app-screen').style.display=name==='app'?'flex':'none';
-  if(name==='project')loadProjects();
+  if(name==='project'){
+    const s=document.getElementById('proj-search');
+    if(s)s.value='';
+    loadProjects();
+  }
   if(name==='floor')loadFloors();
   if(name==='app'){setTimeout(resize,50);}
 }
 
 // ── PROJECTS ───────────────────────────────────────────────
 async function loadProjects(){
+  const list=document.getElementById('project-list');
+  if(list)list.innerHTML='<div style="padding:24px;text-align:center;color:var(--txt3);font-size:13px">Laden …</div>';
   try{
     projects=await sb.get('projects','?order=created_at.desc')||[];
     renderProjects();
-  }catch(e){console.error(e);}
+  }catch(e){
+    console.error('loadProjects error:',e);
+    if(list)list.innerHTML='<div style="padding:24px;text-align:center;color:var(--red);font-size:13px">Verbindungsfehler: '+e.message+'</div>';
+  }
 }
 
 const sidebarCollapsed={};
@@ -2210,7 +2219,7 @@ function pdfText(doc,text,x,y,maxW){
   if(t!==String(text||''))t=t.slice(0,-1)+'…';
   doc.text(t,x,y);
 }
-function generatePDF(project,client,author,opts={}) {
+async function generatePDF(project,client,author,opts={}) {
   const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const W=210,H=297,ML=15,MR=15,MT=15,CW=210-15-15;let y=MT;
   doc.setFillColor(22,22,22);doc.rect(0,0,W,32,'F');
