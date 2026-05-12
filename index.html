@@ -98,8 +98,9 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 
 /* ── Sidebar ── */
 #sidebar{width:260px;border-left:1px solid var(--sidebar-border);display:flex;flex-direction:column;overflow:hidden;background:var(--sidebar-bg)}
+#sb-raeume-body{flex:1;overflow-y:auto;min-height:0;display:flex;flex-direction:column}
 .sh{padding:11px 14px;border-bottom:1px solid var(--sidebar-border);font-size:11px;color:var(--txt2);letter-spacing:.8px;font-weight:700;flex-shrink:0;background:var(--bg2);font-family:'DM Mono',monospace;text-transform:uppercase}
-#rlist{flex:1;overflow-y:auto;padding:8px}
+#rlist{padding:8px}
 .rc{padding:12px 14px;margin-bottom:6px;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--bg2);position:relative;overflow:hidden;transition:border-color .12s,box-shadow .12s;cursor:pointer}
 .rc:hover{border-color:var(--border2);box-shadow:0 1px 6px rgba(0,0,0,.06)}
 .rc.sel{background:#fdf9f3;border-color:var(--gold);box-shadow:0 0 0 2px var(--gold-bg)}
@@ -376,8 +377,8 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
       </div>
 
       <!-- export modal -->
-      <div class="mwrap" id="mw-export" style="display:none;left:40px;top:60px">
-        <div class="modal" style="min-width:320px;max-height:85dvh;display:flex;flex-direction:column"><div class="mdrag" id="md-export"><span class="mtitle">PDF Export</span><span style="font-size:9px;color:var(--txt3)">ZIEHEN</span></div>
+      <div class="mwrap" id="mw-export" style="display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:300">
+        <div class="modal" style="min-width:300px;width:min(380px,92vw);max-height:80dvh;display:flex;flex-direction:column"><div class="mdrag" id="md-export"><span class="mtitle">PDF Export</span><span style="font-size:9px;color:var(--txt3)">ZIEHEN</span></div>
         <div class="mbody" style="overflow-y:auto;flex:1">
           <label>PROJEKTBEZEICHNUNG</label><input id="exp-project" placeholder="z.B. EFH Musterstraße 1">
           <div class="row2">
@@ -397,7 +398,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
             <label class="exp-check-row"><input type="checkbox" id="exp-dach"><span>Dach-Detailwerte</span></label>
           </div>
           <label class="exp-check-row" style="margin-bottom:14px"><input type="checkbox" id="exp-grundriss" checked><span>📐 Grundriss-Übersicht im PDF</span></label>
-        </div><div class="mbtns" style="padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0">
+        </div><div class="mbtns" style="padding:12px 14px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg2)">
             <button class="bcl" onclick="closeExport(false)">Abbrechen</button>
             <button class="bok bok-green" onclick="closeExport(true)">↓ PDF erstellen</button>
           </div
@@ -406,14 +407,15 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
     </div>
 
     <div id="sidebar">
-      <div class="sh" id="sh-raeume" onclick="toggleSidebarSection('raeume')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center">
-        <span>Räume &amp; Flächen</span><span id="sh-raeume-arrow" style="font-size:10px;transition:transform .2s">▲</span>
-      </div>
-      <div id="sb-raeume-body">
+      <div class="sh">Räume &amp; Flächen</div>
+      <div id="sb-scroll" style="flex:1;overflow-y:auto;min-height:0">
         <div id="rlist"></div>
         <div id="totals"></div>
       </div>
-      <div id="hint" style="color:var(--txt3)">Maßstab: 2 Punkte setzen → ✓ Bestätigen → Länge eingeben<br>"Letzten Punkt löschen" entfernt nur den letzten Zeichenpunkt<br>"Maßstab löschen" entfernt die Kalibrierung<br>Kante anklicken = Punkt einfügen<br>Lang drücken = Lupe</div>
+      <div id="hint-header" onclick="toggleHint()" style="padding:10px 14px;border-top:1px solid var(--sidebar-border);font-size:11px;font-weight:600;color:var(--txt2);cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:var(--bg2);flex-shrink:0">
+        <span>ℹ Hilfe</span><span id="hint-arrow" style="font-size:10px;transition:transform .2s">▲</span>
+      </div>
+      <div id="hint" style="color:var(--txt3);display:none">Maßstab: 2 Punkte setzen → ✓ Bestätigen → Länge eingeben<br>„Letzten Punkt löschen" entfernt nur den letzten Zeichenpunkt<br>„Maßstab löschen" entfernt die Kalibrierung<br>Kante anklicken = Punkt einfügen<br>Lang drücken = Lupe</div>
     </div>
   </div>
 </div>
@@ -602,6 +604,14 @@ function toggleSidebarSection(id){
   const arrow=document.getElementById('sh-'+id+'-arrow');
   if(body)body.style.display=sidebarCollapsed[id]?'none':'';
   if(arrow)arrow.style.transform=sidebarCollapsed[id]?'rotate(180deg)':'';
+}
+let hintVisible=false;
+function toggleHint(){
+  hintVisible=!hintVisible;
+  const h=document.getElementById('hint');
+  const a=document.getElementById('hint-arrow');
+  if(h)h.style.display=hintVisible?'':'none';
+  if(a)a.style.transform=hintVisible?'':'rotate(180deg)';
 }
 function filterProjects(){
   const q=(document.getElementById('proj-search')?.value||'').toLowerCase().trim();
@@ -2184,7 +2194,7 @@ async function closeEntry(ok){
 }
 
 // ── EXPORT ─────────────────────────────────────────────────
-function openExportModal(){centerModal('mw-export');setTimeout(()=>document.getElementById('exp-project').focus(),50);}
+function openExportModal(){document.getElementById('mw-export').style.display='';setTimeout(()=>document.getElementById('exp-project').focus(),50);}
 function closeExport(ok){
   document.getElementById('mw-export').style.display='none';
   if(!ok)return;
