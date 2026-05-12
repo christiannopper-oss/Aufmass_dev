@@ -604,7 +604,7 @@ function filterProjects(){
 }
 function renderProjects(){
   const list=document.getElementById('project-list');
-  document.getElementById('project-empty').style.display=projects.length?'none':'block';
+  if(!list)return;
   const cards=projects.map(p=>{
     const created=p.created_at?new Date(p.created_at).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
     const updated=p.updated_at&&p.updated_at!==p.created_at?new Date(p.updated_at).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
@@ -615,9 +615,8 @@ function renderProjects(){
       ${p.author?`<div class="project-card-client">Von: ${p.author}</div>`:''}
       <div class="project-card-dates">${created?'Erstellt: '+created+'<br>':''}${updated?'Geändert: '+updated:''}</div>
     </div>`;}).join('');
-  list.innerHTML='<div id="project-empty" style="display:none" class="empty-state">Noch keine Projekte.<br>Tippe auf „+ Neues Projekt".</div>'+cards;
+  list.innerHTML=cards||'<div id="project-empty" class="empty-state">Noch keine Projekte.<br>Tippe auf „+ Neues Projekt".</div>';
 }
-
 function openProject(id){
   currentProject=projects.find(p=>p.id===id);
   document.getElementById('floor-project-name').textContent=currentProject.name;
