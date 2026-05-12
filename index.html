@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Aufmaß</title>
+<title>measup</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -25,7 +25,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);heig
 /* ── Project Screen ── */
 #project-screen{display:flex;flex-direction:column;height:100dvh;background:var(--bg)}
 #project-header{padding:16px 24px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:var(--shadow)}
-#project-header .brand{font-weight:700;font-size:17px;color:var(--gold);letter-spacing:.3px}
+#project-header .brand{font-size:22px;color:var(--txt);letter-spacing:0;display:flex;align-items:center;gap:10px}
 #project-header .brand small{font-weight:400;color:var(--txt3);font-size:13px;margin-left:8px;letter-spacing:.3px}
 .btn-new{padding:10px 20px;background:var(--gold);border:none;border-radius:var(--radius);color:#fff;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:.1px;transition:background .15s;min-height:44px}
 .btn-new:hover{background:var(--gold-lt)}
@@ -57,11 +57,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);heig
 /* ── App Screen ── */
 #app-screen{display:none;flex-direction:column;height:100dvh}
 #toolbar{background:var(--toolbar-bg);border-bottom:1px solid var(--toolbar-border);flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,.05);position:sticky;top:0;z-index:10;-webkit-transform:translateZ(0);transform:translateZ(0)}
-.tb-row{display:flex;align-items:center;gap:6px;padding:7px 14px;flex-wrap:nowrap;min-height:48px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}.tb-row::-webkit-scrollbar{display:none}
+.tb-row{display:flex;align-items:center;gap:6px;padding:6px 16px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}.tb-row::-webkit-scrollbar{display:none}
+#tb-brand{min-height:44px;background:var(--bg2);border-bottom:1px solid var(--toolbar-border)}
+#tb-nav{min-height:42px;background:var(--bg3);border-bottom:1px solid var(--toolbar-border);padding:5px 16px}
+#tb-tools{min-height:48px;background:var(--toolbar-bg);border-bottom:1px solid var(--toolbar-border)}
 .tb-row+.tb-row{border-top:1px solid var(--toolbar-border);background:#fafaf8}
 .tb-sep{width:1px;height:18px;background:var(--border);flex-shrink:0;margin:0 2px}
-.floor-label{font-size:13px;color:var(--txt2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
-.brand-sm{font-weight:700;font-size:16px;color:var(--gold);white-space:nowrap}
+.floor-label{font-size:13px;color:var(--txt);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.brand-sm{font-size:18px;color:var(--txt);white-space:nowrap;display:flex;align-items:center;gap:8px}
 .tb-group{display:flex;align-items:center;gap:3px}
 .tb-label{font-size:11px;color:var(--txt2);letter-spacing:.4px;font-weight:600;white-space:nowrap;padding:0 4px;font-family:'DM Sans',sans-serif;text-transform:uppercase}
 
@@ -122,7 +125,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 .tl{color:var(--txt2)}.tv{font-weight:600;color:var(--blue)}.tv-net{font-weight:600;color:var(--green)}
 #hint{padding:12px 14px;border-top:1px solid var(--sidebar-border);font-size:12px;color:var(--txt2);line-height:1.9;flex-shrink:0;background:var(--bg2)}
 
-#drop-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;gap:12px}
+#drop-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;gap:14px}
 .di{width:56px;height:56px;border:1.5px dashed var(--border2);border-radius:12px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.6)}
 .di svg{width:24px;height:24px;stroke:var(--txt3);fill:none}
 .dt{font-size:15px;color:var(--txt2);font-weight:500}
@@ -192,7 +195,15 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 <!-- ── PROJECT SCREEN ── -->
 <div id="project-screen">
   <div id="project-header">
-    <span class="brand">AUFMASS <small>Digitales Aufmaß</small></span>
+    <span class="brand" style="display:flex;align-items:center;gap:10px">
+      <svg width="34" height="34" viewBox="0 0 60 60" fill="none">
+        <rect width="60" height="60" rx="13" fill="#b8842a"/>
+        <path d="M13 46 L13 22 L30 38 L47 22 L47 46" stroke="#1a1a1a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <path d="M30 38 L30 14 M25 19 L30 14 L35 19" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span style="letter-spacing:-0.5px"><span style="font-weight:700;color:var(--txt)">meas</span><span style="font-weight:300;color:var(--gold)">up</span></span>
+      <small>Aufmaß &amp; Flächenberechnung</small>
+    </span>
     <button class="btn-new" onclick="openOverlay('project')">+ Neues Projekt</button>
   </div>
   <div id="project-list">
@@ -218,12 +229,23 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 <!-- ── APP SCREEN ── -->
 <div id="app-screen">
   <div id="toolbar">
-    <!-- Zeile 1: Navigation + Plan laden + Ansichten + Export -->
-    <div class="tb-row">
-      <button class="back-btn" onclick="showScreen('floor')">← Zurück</button>
-      <div class="tb-sep"></div>
-      <span class="brand-sm">AUFMASS</span>
+    <!-- Zeile 1: Brand links · Projektname rechts -->
+    <div class="tb-row" id="tb-brand">
+      <span class="brand-sm" id="brand-logo">
+        <svg width="30" height="30" viewBox="0 0 60 60" fill="none" style="flex-shrink:0;display:block">
+          <rect width="60" height="60" rx="13" fill="#b8842a"/>
+          <path d="M13 46 L13 22 L30 38 L47 22 L47 46" stroke="#1a1a1a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <path d="M30 38 L30 14 M25 19 L30 14 L35 19" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span style="letter-spacing:-0.5px"><span style="font-weight:700;color:var(--txt)">meas</span><span style="font-weight:300;color:var(--gold)">up</span></span>
+      </span>
+      <div class="spacer"></div>
       <span class="floor-label" id="current-floor-label"></span>
+      <button class="tbtn export" onclick="openExportModal()" id="btn-export" style="display:none">↓ Export</button>
+    </div>
+    <!-- Zeile 2: Navigation + Plan laden + Ansicht wechseln -->
+    <div class="tb-row" id="tb-nav">
+      <button class="back-btn" onclick="showScreen('floor')">← Zurück</button>
       <div class="tb-sep"></div>
       <button class="tbtn primary" onclick="document.getElementById('fi').click()">↑ Plan laden</button>
       <input id="fi" type="file" accept="application/pdf,image/*" style="display:none" onchange="loadFile(this)">
@@ -231,11 +253,8 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
       <div class="tb-sep" id="sep-views" style="display:none"></div>
       <button class="tbtn" id="btn-gdr" onclick="setView('grundriss')" style="display:none">📐 Grundriss</button>
       <button class="tbtn" id="btn-sch" onclick="setView('schnitt')" style="display:none">✂ Schnitt</button>
-      <div class="spacer"></div>
-
-      <button class="tbtn export" onclick="openExportModal()" id="btn-export" style="display:none">↓ PDF Export</button>
     </div>
-    <!-- Zeile 2: Werkzeuge -->
+    <!-- Zeile 3: Werkzeuge -->
     <div class="tb-row" id="tb-tools">
       <span class="tb-label">Referenz</span>
       <div class="tb-group">
@@ -284,8 +303,31 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
       <button id="page-next" onclick="changePage(1)" style="background:transparent;border:none;color:#b8842a;cursor:pointer;font-size:20px;padding:2px 6px;min-width:36px;min-height:36px">▶</button>
     </div>
     <div id="drop-hint">
-        <div class="di"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
-        <div class="dt">Grundriss-PDF ablegen oder laden</div>
+        <!-- Logo A as illustration -->
+        <svg width="120" height="110" viewBox="0 0 120 110" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity:0.18">
+          <!-- L-shaped floor plan -->
+          <path d="M20 15 L20 90 L100 90" stroke="#b8842a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- Corner dot -->
+          <circle cx="20" cy="90" r="6" fill="#b8842a"/>
+          <!-- Start point -->
+          <circle cx="20" cy="15" r="4" fill="none" stroke="#b8842a" stroke-width="2.5"/>
+          <!-- End point -->
+          <circle cx="100" cy="90" r="4" fill="none" stroke="#b8842a" stroke-width="2.5"/>
+          <!-- Measure tick top -->
+          <line x1="12" y1="15" x2="28" y2="15" stroke="#b8842a" stroke-width="2.5"/>
+          <!-- Measure tick right -->
+          <line x1="100" y1="82" x2="100" y2="98" stroke="#b8842a" stroke-width="2.5"/>
+          <!-- Dimension line horizontal (faint) -->
+          <line x1="20" y1="105" x2="100" y2="105" stroke="#b8842a" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <line x1="20" y1="101" x2="20" y2="109" stroke="#b8842a" stroke-width="1.5"/>
+          <line x1="100" y1="101" x2="100" y2="109" stroke="#b8842a" stroke-width="1.5"/>
+          <!-- Dimension line vertical (faint) -->
+          <line x1="8" y1="15" x2="8" y2="90" stroke="#b8842a" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <line x1="4" y1="15" x2="12" y2="15" stroke="#b8842a" stroke-width="1.5"/>
+          <line x1="4" y1="90" x2="12" y2="90" stroke="#b8842a" stroke-width="1.5"/>
+        </svg>
+        <div class="dt">Plan laden um loszulegen</div>
+        <div style="font-size:12px;color:var(--txt3);text-align:center;line-height:1.8;max-width:220px">PDF oder Bild ablegen<br>oder oben auf <strong style="color:var(--txt2)">↑ Plan laden</strong> tippen</div>
       </div>
 
       <!-- room modal -->
@@ -718,7 +760,7 @@ function generateProjectPDF(project,allFloorRooms){
   let y=MT;
   // Header
   doc.setFillColor(22,22,22);doc.rect(0,0,W,32,'F');
-  doc.setTextColor(200,169,110);doc.setFontSize(18);doc.setFont('helvetica','bold');doc.text('AUFMASS',ML,y+10);
+  doc.setTextColor(200,169,110);doc.setFontSize(18);doc.setFont('helvetica','bold');doc.setFont('helvetica','bold');doc.text('measup',ML,y+10);
   doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(150,140,120);
   doc.text(new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}),W-MR,y+10,{align:'right'});
   doc.setFontSize(13);doc.setFont('helvetica','bold');doc.setTextColor(240,230,208);
@@ -824,8 +866,8 @@ function generateProjectPDF(project,allFloorRooms){
   y+=22;
   // page numbers
   const pc=doc.getNumberOfPages();
-  for(let p=1;p<=pc;p++){doc.setPage(p);doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor(150,150,150);doc.text('Aufmaß-App · Seite '+p+' von '+pc,W/2,H-8,{align:'center'});doc.line(ML,H-12,W-MR,H-12);}
-  const fname1=(project.name.replace(/\s+/g,'-')||'Aufmass')+'-Gesamt-'+new Date().toISOString().slice(0,10)+'.pdf';
+  for(let p=1;p<=pc;p++){doc.setPage(p);doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor(150,150,150);doc.text('measup-App · Seite '+p+' von '+pc,W/2,H-8,{align:'center'});doc.line(ML,H-12,W-MR,H-12);}
+  const fname1=(project.name.replace(/\s+/g,'-')||'measup')+'-Gesamt-'+new Date().toISOString().slice(0,10)+'.pdf';
   const blob1=doc.output('blob');const url1=URL.createObjectURL(blob1);
   const a1=document.createElement('a');a1.href=url1;a1.download=fname1;document.body.appendChild(a1);a1.click();setTimeout(()=>{URL.revokeObjectURL(url1);a1.remove();},2000);
 }
@@ -1117,7 +1159,7 @@ function resize(){
   }
 }
 window.addEventListener('resize',resize);
-window.__AUFMASS_BUILD='v41';
+window.__measup_BUILD='v41';
 
 function toW(cx,cy){const r=cv.getBoundingClientRect();return{x:(cx-r.left-panX)/zoom,y:(cy-r.top-panY)/zoom};}
 
@@ -2093,7 +2135,7 @@ function closeExport(ok){
     grundriss:    document.getElementById('exp-grundriss')?.checked!==false,
   };
   generatePDF(
-    document.getElementById('exp-project').value.trim()||'Aufmaß',
+    document.getElementById('exp-project').value.trim()||'measup',
     document.getElementById('exp-client').value.trim(),
     document.getElementById('exp-author').value.trim(),
     opts
@@ -2104,7 +2146,7 @@ function generatePDF(project,client,author,opts={}){
   const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const W=210,H=297,ML=15,MR=15,MT=15,CW=210-15-15;let y=MT;
   doc.setFillColor(22,22,22);doc.rect(0,0,W,32,'F');
-  doc.setTextColor(200,169,110);doc.setFontSize(18);doc.setFont('helvetica','bold');doc.text('AUFMASS',ML,y+10);
+  doc.setTextColor(200,169,110);doc.setFontSize(18);doc.setFont('helvetica','bold');doc.setFont('helvetica','bold');doc.text('measup',ML,y+10);
   doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(150,140,120);doc.text(new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}),W-MR,y+10,{align:'right'});
   doc.setFontSize(13);doc.setFont('helvetica','bold');doc.setTextColor(240,230,208);doc.text(project,ML,y+20);
   if(client){doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(150,140,120);doc.text('Auftraggeber: '+client,ML,y+26);}
@@ -2130,9 +2172,40 @@ function generatePDF(project,client,author,opts={}){
         doc.setDrawColor(180,175,165);doc.rect(ML,y,CW,iH+4);
         doc.addImage(imgData,'JPEG',iX,y+2,iW,iH);
         y+=iH+8;
-        // Caption
+        // Draw ref line on the snapshot image if ref points exist
+        if(refPts.length===2&&scaleGrundriss){
+          // Convert world coords to canvas pixel, then to PDF mm
+          const rp0=refPts[0],rp1=refPts[1];
+          // canvas pixel positions
+          const cx0=rp0.x*zoom+panX, cy0=rp0.y*zoom+panY;
+          const cx1=rp1.x*zoom+panX, cy1=rp1.y*zoom+panY;
+          // normalise to 0..1 within canvas
+          const nx0=cx0/cv2.width, ny0=cy0/cv2.height;
+          const nx1=cx1/cv2.width, ny1=cy1/cv2.height;
+          // pdf coords within image box
+          const px0=iX+nx0*iW, py0=y-iH-6+2+ny0*iH;
+          const px1=iX+nx1*iW, py1=y-iH-6+2+ny1*iH;
+          // Red ref line
+          doc.setDrawColor(220,50,50);doc.setLineWidth(0.6);
+          doc.line(px0,py0,px1,py1);
+          // Dots at endpoints
+          doc.setFillColor(220,50,50);
+          doc.circle(px0,py0,0.8,'F');doc.circle(px1,py1,0.8,'F');
+          doc.setLineWidth(0.2);
+        }
+        // Caption with ref value
         doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(120,110,90);
-        doc.text('Grundriss-Übersicht · '+rooms.length+' Raum'+(rooms.length!==1?'e':''),ML,y);
+        let captionText='Grundriss-Übersicht · '+rooms.length+' Raum'+(rooms.length!==1?'e':'');
+        if(refLengthGrundrissM&&scaleGrundriss){
+          captionText+=' · Referenzmaß: '+(refLengthGrundrissM*100).toFixed(0)+' cm';
+        }
+        doc.text(captionText,ML,y);
+        // Ref legend dot
+        if(refLengthGrundrissM&&scaleGrundriss){
+          doc.setFillColor(220,50,50);doc.circle(ML+doc.getTextWidth(captionText)+2,y-1,0.8,'F');
+          doc.setFontSize(7);doc.setTextColor(180,40,40);
+          doc.text('= Referenzmaß',ML+doc.getTextWidth(captionText)+4,y);
+        }
         y+=6;
       }
     }catch(e){console.warn('Canvas-Snapshot fehlgeschlagen:',e);}
@@ -2190,8 +2263,8 @@ function generatePDF(project,client,author,opts={}){
   });
   checkPage(22);y+=4;
   doc.setFillColor(22,22,22);doc.rect(ML,y,CW,24,'F');doc.setFontSize(9);doc.setFont('helvetica','bold');doc.setTextColor(200,169,110);doc.text('GESAMT',ML+2,y+6);doc.setTextColor(150,200,180);doc.text('Wand brutto:',ML+50,y+6);doc.text(totalWG.toFixed(2)+' m²',ML+90,y+6);doc.text('Wand netto:',ML+50,y+12);doc.text(totalWN.toFixed(2)+' m²',ML+90,y+12);doc.setTextColor(110,181,200);doc.text('Decke gesamt:',ML+120,y+6);doc.text(totalCeil.toFixed(2)+' m²',ML+165,y+6);if(totalCeilFlat>0||totalSlope>0){doc.text('Decke flach:',ML+120,y+12);doc.text(totalCeilFlat.toFixed(2)+' m²',ML+165,y+12);doc.text('Schräge:',ML+120,y+18);doc.text(totalSlope.toFixed(2)+' m²',ML+165,y+18);}y+=28;
-  const pageCount=doc.getNumberOfPages();for(let p=1;p<=pageCount;p++){doc.setPage(p);doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor(150,150,150);doc.text('Aufmaß-App · Seite '+p+' von '+pageCount,W/2,H-8,{align:'center'});doc.line(ML,H-12,W-MR,H-12);}
-  const fname2=(project.replace(/\s+/g,'-')||'Aufmass')+'-'+new Date().toISOString().slice(0,10)+'.pdf';
+  const pageCount=doc.getNumberOfPages();for(let p=1;p<=pageCount;p++){doc.setPage(p);doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor(150,150,150);doc.text('measup-App · Seite '+p+' von '+pageCount,W/2,H-8,{align:'center'});doc.line(ML,H-12,W-MR,H-12);}
+  const fname2=(project.replace(/\s+/g,'-')||'measup')+'-'+new Date().toISOString().slice(0,10)+'.pdf';
   const blob2=doc.output('blob');const url2=URL.createObjectURL(blob2);
   const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1;
   if(isIOS){
@@ -3021,7 +3094,7 @@ async function runKIAnalyse(){
     statusEl.textContent='ChatGPT analysiert den Plan...';
 
     const prompt=viewMode==='schnitt'
-      ?`Du analysierst einen Schnittplan (Querschnitt) eines Gebäudes für eine Aufmaß-App.
+      ?`Du analysierst einen Schnittplan (Querschnitt) eines Gebäudes für eine measup-App.
 
 KOORDINATENSYSTEM: Bildgröße = 1.0 × 1.0. [0,0] = oben links, [1,1] = unten rechts.
 Der Plan liegt im Bild bei X: ${planX1} bis ${planX2}, Y: ${planY1} bis ${planY2}.
@@ -3033,7 +3106,7 @@ Erkenne:
 
 Antworte NUR mit JSON:
 {"ref":{"p1":[x,y],"p2":[x,y],"lengthM":5.0},"schnitt":{"points":[[x,y],...]}}`
-      :`Du analysierst einen Grundrissplan für eine Aufmaß-App.
+      :`Du analysierst einen Grundrissplan für eine measup-App.
 
 KOORDINATENSYSTEM: Bildgröße = 1.0 × 1.0. [0,0] = oben links des gesamten Bildes, [1,1] = unten rechts.
 WICHTIG: Der Plan liegt im Bild bei X: ${planX1} bis ${planX2}, Y: ${planY1} bis ${planY2}.
