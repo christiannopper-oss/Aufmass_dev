@@ -206,6 +206,10 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
     </span>
     <button class="btn-new" onclick="openOverlay('project')">+ Neues Projekt</button>
   </div>
+  <div style="padding:12px 24px 0;flex-shrink:0">
+    <input id="proj-search" type="text" placeholder="🔍  Projekt suchen …" oninput="filterProjects()"
+      style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:14px;color:var(--txt);background:var(--bg2);outline:none;box-sizing:border-box">
+  </div>
   <div id="project-list">
     <div class="empty-state" id="project-empty">Noch keine Projekte.<br>Tippe auf „+ Neues Projekt"<br>um zu starten.</div>
   </div>
@@ -215,6 +219,11 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 <div id="floor-screen">
   <div id="floor-header">
     <button class="back-btn" onclick="showScreen('project')">← Projekte</button>
+    <svg width="26" height="26" viewBox="0 0 60 60" fill="none" style="flex-shrink:0">
+      <rect width="60" height="60" rx="13" fill="#b8842a"/>
+      <path d="M13 46 L13 22 L30 38 L47 22 L47 46" stroke="#1a1a1a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <path d="M30 38 L30 14 M25 19 L30 14 L35 19" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
     <span class="floor-project-name" id="floor-project-name"></span>
     <button class="tbtn warn" onclick="openOverlay('project-edit')" style="font-size:10px">✎</button>
     <button class="tbtn danger" onclick="deleteCurrentProject()" style="font-size:10px">✕</button>
@@ -250,17 +259,18 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
       <button class="tbtn primary" onclick="document.getElementById('fi').click()">↑ Plan laden</button>
       <input id="fi" type="file" accept="application/pdf,image/*" style="display:none" onchange="loadFile(this)">
       <button class="tbtn" id="btn-rotate" onclick="rotatePlan()">↻ Drehen</button>
+      <button class="tbtn warn" id="btn-del-plan" style="display:none" onclick="deletePlan()">✕ Plan löschen</button>
       <div class="tb-sep" id="sep-views" style="display:none"></div>
       <button class="tbtn" id="btn-gdr" onclick="setView('grundriss')" style="display:none">📐 Grundriss</button>
       <button class="tbtn" id="btn-sch" onclick="setView('schnitt')" style="display:none">✂ Schnitt</button>
     </div>
     <!-- Zeile 3: Werkzeuge -->
     <div class="tb-row" id="tb-tools">
-      <span class="tb-label">Referenz</span>
+      <span class="tb-label">Maßstab</span>
       <div class="tb-group">
-        <button class="tbtn" id="btn-ref" onclick="setTool('ref')">Ref setzen</button>
+        <button class="tbtn" id="btn-ref" onclick="setTool('ref')">Maßstab setzen</button>
         <button class="tbtn confirm" id="btn-ref-confirm" style="display:none" onclick="confirmRef()">✓ Bestätigen</button>
-        <button class="tbtn warn" id="btn-ref-reset" onclick="resetRef()">Ref löschen</button>
+        <button class="tbtn warn" id="btn-ref-reset" onclick="resetRef()">Maßstab löschen</button>
       </div>
       <div class="tb-sep" id="sep-raum"></div>
       <span class="tb-label" id="lbl-raum">Raum</span>
@@ -342,7 +352,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 
       <!-- ref modal -->
       <div class="mwrap" id="mw-ref" style="display:none;left:40px;top:60px">
-        <div class="modal"><div class="mdrag" id="md-ref"><span class="mtitle">Referenzmaß eingeben</span><span style="font-size:9px;color:#555">ZIEHEN</span></div>
+        <div class="modal"><div class="mdrag" id="md-ref"><span class="mtitle">Maßstab eingeben</span><span style="font-size:9px;color:#555">ZIEHEN</span></div>
         <div class="mbody">
           <p style="font-size:11px;color:#555;margin-bottom:14px;line-height:1.6">Beide Punkte kontrolliert und korrekt gesetzt?</p>
           <label>REALES MASS (m)</label><input id="r-len" type="number" placeholder="z.B. 10.50" step="0.01" min="0.01" oninput="document.getElementById('r-ok').disabled=!this.value">
@@ -369,8 +379,8 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 
       <!-- export modal -->
       <div class="mwrap" id="mw-export" style="display:none;left:40px;top:60px">
-        <div class="modal" style="min-width:340px"><div class="mdrag" id="md-export"><span class="mtitle">PDF Export</span><span style="font-size:9px;color:var(--txt3)">ZIEHEN</span></div>
-        <div class="mbody">
+        <div class="modal" style="min-width:320px;max-height:85dvh;display:flex;flex-direction:column"><div class="mdrag" id="md-export"><span class="mtitle">PDF Export</span><span style="font-size:9px;color:var(--txt3)">ZIEHEN</span></div>
+        <div class="mbody" style="overflow-y:auto;flex:1">
           <label>PROJEKTBEZEICHNUNG</label><input id="exp-project" placeholder="z.B. EFH Musterstraße 1">
           <div class="row2">
             <div><label>AUFTRAGGEBER</label><input id="exp-client" placeholder="optional"></div>
@@ -389,19 +399,23 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
             <label class="exp-check-row"><input type="checkbox" id="exp-dach"><span>Dach-Detailwerte</span></label>
           </div>
           <label class="exp-check-row" style="margin-bottom:14px"><input type="checkbox" id="exp-grundriss" checked><span>📐 Grundriss-Übersicht im PDF</span></label>
-          <div class="mbtns">
+        </div><div class="mbtns" style="padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0">
             <button class="bcl" onclick="closeExport(false)">Abbrechen</button>
             <button class="bok bok-green" onclick="closeExport(true)">↓ PDF erstellen</button>
-          </div>
+          </div
         </div></div>
       </div>
     </div>
 
     <div id="sidebar">
-      <div class="sh">Räume & Flächen</div>
-      <div id="rlist"></div>
-      <div id="totals"></div>
-      <div id="hint" style="color:var(--txt3)">Ref setzen: 2 Punkte → ✓ Bestätigen → Maß eingeben<br>"Letzten Punkt löschen" entfernt nur den letzten Zeichenpunkt<br>"Ref löschen" entfernt das komplette Referenzmaß<br>Kante anklicken = Punkt einfügen<br>Lang drücken = Lupe</div>
+      <div class="sh" id="sh-raeume" onclick="toggleSidebarSection('raeume')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+        <span>Räume &amp; Flächen</span><span id="sh-raeume-arrow" style="font-size:10px;transition:transform .2s">▲</span>
+      </div>
+      <div id="sb-raeume-body">
+        <div id="rlist"></div>
+        <div id="totals"></div>
+      </div>
+      <div id="hint" style="color:var(--txt3)">Maßstab: 2 Punkte setzen → ✓ Bestätigen → Länge eingeben<br>"Letzten Punkt löschen" entfernt nur den letzten Zeichenpunkt<br>"Maßstab löschen" entfernt die Kalibrierung<br>Kante anklicken = Punkt einfügen<br>Lang drücken = Lupe</div>
     </div>
   </div>
 </div>
@@ -472,7 +486,7 @@ let scale=null; // current active scale (alias)
 let scaleGrundriss=null; // scale for grundriss view
 let scaleSchnitt=null;   // scale for schnitt view
 let refLengthGrundrissM=null;
-let refLengthSchnittM=null;     // reales Referenzmaß in m (geräteunabhängig)
+let refLengthSchnittM=null;     // reales Maßstab in m (geräteunabhängig)
 let selRoom=null,pendingPts=null;
 let isPanning=false,lastPX=0,lastPY=0;
 let drag=null,hoverPt=null,hoverEdge=null;
@@ -574,6 +588,22 @@ async function loadProjects(){
   }catch(e){console.error(e);}
 }
 
+const sidebarCollapsed={};
+function toggleSidebarSection(id){
+  sidebarCollapsed[id]=!sidebarCollapsed[id];
+  const body=document.getElementById('sb-'+id+'-body');
+  const arrow=document.getElementById('sh-'+id+'-arrow');
+  if(body)body.style.display=sidebarCollapsed[id]?'none':'';
+  if(arrow)arrow.style.transform=sidebarCollapsed[id]?'rotate(180deg)':'';
+}
+function filterProjects(){
+  const q=(document.getElementById('proj-search')?.value||'').toLowerCase().trim();
+  document.querySelectorAll('#project-list .project-card').forEach(card=>{
+    const name=card.querySelector('.project-card-name')?.textContent.toLowerCase()||'';
+    const client=card.querySelector('.project-card-client')?.textContent.toLowerCase()||'';
+    card.style.display=(!q||name.includes(q)||client.includes(q))?'':'none';
+  });
+}
 function renderProjects(){
   const list=document.getElementById('project-list');
   document.getElementById('project-empty').style.display=projects.length?'none':'block';
@@ -760,7 +790,35 @@ function generateProjectPDF(project,allFloorRooms){
   let y=MT;
   // Header
   doc.setFillColor(22,22,22);doc.rect(0,0,W,32,'F');
-  doc.setTextColor(200,169,110);doc.setFontSize(18);doc.setFont('helvetica','bold');doc.setFont('helvetica','bold');doc.text('measup',ML,y+10);
+  // Logo D als Bild im PDF
+  try{
+    const logoSvg=`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 60 60">
+      <rect width="60" height="60" rx="13" fill="#b8842a"/>
+      <path d="M13 46 L13 22 L30 38 L47 22 L47 46" stroke="#1a1a1a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <path d="M30 38 L30 14 M25 19 L30 14 L35 19" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+    const logoBlob=new Blob([logoSvg],{type:'image/svg+xml'});
+    const logoUrl=URL.createObjectURL(logoBlob);
+    await new Promise(res=>{
+      const img=new Image();
+      img.onload=()=>{
+        const c=document.createElement('canvas');c.width=80;c.height=80;
+        const cx=c.getContext('2d');cx.drawImage(img,0,0,80,80);
+        doc.addImage(c.toDataURL('image/png'),ML,y+2,9,9);
+        URL.revokeObjectURL(logoUrl);res();
+      };
+      img.onerror=()=>{URL.revokeObjectURL(logoUrl);res();};
+      img.src=logoUrl;
+    });
+    doc.setTextColor(200,169,110);doc.setFontSize(18);doc.setFont('helvetica','bold');
+    doc.text('meas',ML+11,y+10);
+    const measW=doc.getTextWidth('meas');
+    doc.setFont('helvetica','normal');doc.setFontSize(18);doc.setTextColor(160,130,70);
+    doc.text('up',ML+11+measW,y+10);
+  }catch(e){
+    doc.setTextColor(200,169,110);doc.setFontSize(18);doc.setFont('helvetica','bold');
+    doc.text('measup',ML,y+10);
+  }
   doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(150,140,120);
   doc.text(new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}),W-MR,y+10,{align:'right'});
   doc.setFontSize(13);doc.setFont('helvetica','bold');doc.setTextColor(240,230,208);
@@ -809,7 +867,7 @@ function generateProjectPDF(project,allFloorRooms){
     // Floor header
     doc.setFillColor(40,40,40);doc.rect(ML,y,CW,9,'F');
     doc.setFontSize(11);doc.setFont('helvetica','bold');doc.setTextColor(200,169,110);
-    doc.text(fl.name,ML+2,y+6.5);y+=10;
+    pdfText(doc,fl.name,ML+2,y+6.5,CW-10);y+=10;
     tableHeader();
     const sc=fl.scale_px_per_m||null;
     let flWG=0,flWN=0,flCeil=0,flCeilFlat=0,flSlope=0;
@@ -819,7 +877,7 @@ function generateProjectPDF(project,allFloorRooms){
       const rowColor=idx%2===0?[248,246,242]:[255,255,255];
       doc.setFillColor(...rowColor);doc.rect(ML,y,CW,10,'F');
       doc.setFontSize(9);doc.setFont('helvetica','bold');doc.setTextColor(30,30,30);
-      doc.text((idx+1)+'. '+rm.name,ML+2,y+6.5);
+      pdfText(doc,(idx+1)+'. '+rm.name,ML+2,y+6.5,50);
       doc.setFont('helvetica','normal');doc.setTextColor(50,50,50);
       if(a!==null){
         doc.text(a.toFixed(2)+' m²',ML+60,y+6.5);
@@ -835,7 +893,7 @@ function generateProjectPDF(project,allFloorRooms){
       // detail rows
       checkPage(6);doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(130,120,100);
       doc.setFillColor(...rowColor);doc.rect(ML,y,CW,5.5,'F');
-      doc.text('  Raumhöhe: '+rm.height.toFixed(2)+' m',ML+2,y+4);y+=6;
+      pdfText(doc,'  Raumhöhe: '+rm.height.toFixed(2)+' m',ML+2,y+4,CW-4);y+=6;
       if(a!==null && (slope>0 || deckeFlat!==a)){checkPage(6);doc.setFillColor(...rowColor);doc.rect(ML,y,CW,5.5,'F');doc.setTextColor(120,100,60);doc.text('  Decke flach: '+deckeFlat.toFixed(2)+' m² · Schräge: '+slope.toFixed(2)+' m² · Decke gesamt: '+deckeGes.toFixed(2)+' m²',ML+2,y+4);y+=6;}
       (rm.abzuege||[]).forEach(e=>{checkPage(6);const eff=(e.vob&&e.b*e.h<2.5)?0:e.b*e.h*e.n;doc.setFillColor(...rowColor);doc.rect(ML,y,CW,5.5,'F');doc.setTextColor(160,60,60);doc.text('  − '+e.name+': '+e.b.toFixed(2)+'×'+e.h.toFixed(2)+' m × '+e.n+(e.vob?' (VOB)':''+(eff===0?' → nicht abgezogen':'')),ML+2,y+4);if(eff>0)doc.text('-'+eff.toFixed(2)+' m²',ML+145,y+4);y+=6;});
       (rm.zusaetze||[]).forEach(e=>{checkPage(6);doc.setFillColor(...rowColor);doc.rect(ML,y,CW,5.5,'F');doc.setTextColor(40,120,80);doc.text('  + '+e.name+': '+e.b.toFixed(2)+'×'+e.h.toFixed(2)+' m × '+e.n,ML+2,y+4);doc.text('+'+(e.b*e.h*e.n).toFixed(2)+' m²',ML+145,y+4);y+=6;});
@@ -1204,23 +1262,30 @@ function calcAcrylWandWand(pts, raumH, traufKanten, knieH){
   if(!pts||pts.length<3)return 0;
   const n=pts.length;
   const traufSet=new Set(traufKanten||[]);
+  // Signed area via shoelace → positive = CCW in screen coords (Y down)
+  let signedArea=0;
+  for(let i=0;i<n;i++){
+    const a=pts[i],b=pts[(i+1)%n];
+    signedArea+=(b.x-a.x)*(b.y+a.y);
+  }
+  // isCCW in screen coords (Y-down) when signedArea < 0
+  const isCCW=signedArea<0;
   let total=0;
-  // Bestimme Windung (CW oder CCW)
-  let area=0;
-  for(let i=0;i<n;i++){const a=pts[i],b=pts[(i+1)%n];area+=(b.x-a.x)*(b.y+a.y);}
-  const isCW=area>0;
   for(let i=0;i<n;i++){
     const prev=(i-1+n)%n;
-    const a=pts[prev],b=pts[i],c=pts[(i+1)%n];
+    const next=(i+1)%n;
+    const a=pts[prev],b=pts[i],c=pts[next];
+    // cross product of vectors BA and BC
     const cross=(b.x-a.x)*(c.y-b.y)-(b.y-a.y)*(c.x-b.x);
-    const isInterior=isCW?(cross>0):(cross<0);
+    // Interior (concave/reflex) corner: cross sign matches winding
+    const isInterior=isCCW?(cross>0):(cross<0);
     if(!isInterior)continue;
-    // Kante prev→i und Kante i→next
-    const edgeIn=prev;   // Kante die in Punkt i reinläuft
-    const edgeOut=i;     // Kante die aus Punkt i rausläuft
+    // Which edges touch this corner
+    const edgeIn=prev;  // edge prev→i
+    const edgeOut=i;    // edge i→next
     const touchesTrauf=traufSet.has(edgeIn)||traufSet.has(edgeOut);
-    // Ecke an Traufwand → Kniestockhöhe, sonst volle Raumhöhe
-    total+=touchesTrauf?Math.min(raumH,knieH||raumH):raumH;
+    const h=touchesTrauf?Math.min(raumH,knieH!=null?knieH:raumH):raumH;
+    total+=h;
   }
   return total;
 }
@@ -1759,7 +1824,7 @@ function updStatus(){
     } else if(tool==='ref'){
       document.getElementById('st-m').textContent=refPts.length===0?'Punkt 1 setzen':refPts.length===1?'Punkt 2 setzen':refConfirmed?'Kalibriert':'Punkte prüfen → ✓ Bestätigen';
     } else {
-      document.getElementById('st-m').textContent=scaleSchnitt?'Kalibriert ✓ – Schnitt zeichnen':'Zuerst Referenzmaß setzen';
+      document.getElementById('st-m').textContent=scaleSchnitt?'Kalibriert ✓ – Schnitt zeichnen':'Zuerst Maßstab setzen';
     }
     document.getElementById('btn-ref-confirm').style.display=refReady?'':'none';
     const _bd=document.getElementById('btn-del');if(_bd)_bd.style.display='none';
@@ -1869,7 +1934,7 @@ function updSidebar(){
     } else {
       schnittCard=`<div class="rc" style="border-color:var(--border2)">
         <div class="rn"><span style="color:var(--txt3)">✂ Schnitt</span></div>
-        <div class="rs" style="margin-top:4px;color:var(--txt3)">Noch nicht ausgewertet.<br>Ref setzen → Schnitt zeichnen → Auswerten.</div>
+        <div class="rs" style="margin-top:4px;color:var(--txt3)">Noch nicht ausgewertet.<br>Maßstab setzen → Schnitt zeichnen → Auswerten.</div>
       </div>`;
     }
   }
@@ -1877,7 +1942,7 @@ function updSidebar(){
   // ── Ref-Karte ──
   const refCard = (activeRefPts && activeRefPts.length===2)
     ? `<div class="rc" onclick="openRefEditor()">
-        <div class="rn"><span>Referenzmaß</span><div style="display:flex;gap:4px">
+        <div class="rn"><span>Maßstab</span><div style="display:flex;gap:4px">
           <button class="edit-btn" onclick="openRefEditor();event.stopPropagation()">✎</button>
           <button class="edit-btn" style="border-color:#c0392b33;color:#c0392b" onclick="resetRef();event.stopPropagation()">✕</button>
         </div></div>
@@ -1981,7 +2046,7 @@ function updSidebar(){
 
 // ── ACTIONS ────────────────────────────────────────────────
 function activateDraw(){
-  if(!scale){alert('Bitte zuerst das Referenzmaß setzen!');setTool('ref');return;}
+  if(!scale){alert('Bitte zuerst das Maßstab setzen!');setTool('ref');return;}
   setTool('draw');
 }
 function setTool(t){tool=t;
@@ -2016,7 +2081,7 @@ function activateSelectForRoom(i){
 function undoPoint(){if(curPts.length>0){curPts.pop();updStatus();draw();}}
 function cancelDraw(){curPts=[];drag=null;snapInfo=null;mouseW=null;hoverPt=null;hoverEdge=null;hideMag();setTool('select');updStatus();draw();}
 async function resetRef(){
-  if(!confirm('Referenzmaß wirklich löschen?'))return;
+  if(!confirm('Maßstab wirklich löschen?'))return;
   if(viewMode==='schnitt'){
     scaleSchnitt=null;
     refPtsSchnitt=[];
@@ -2142,7 +2207,13 @@ function closeExport(ok){
   );
 }
 
-function generatePDF(project,client,author,opts={}){
+function pdfText(doc,text,x,y,maxW){
+  let t=String(text||'');
+  while(t.length>2&&doc.getTextWidth(t)>maxW)t=t.slice(0,-1);
+  if(t!==String(text||''))t=t.slice(0,-1)+'…';
+  doc.text(t,x,y);
+}
+function generatePDF(project,client,author,opts={}) {
   const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const W=210,H=297,ML=15,MR=15,MT=15,CW=210-15-15;let y=MT;
   doc.setFillColor(22,22,22);doc.rect(0,0,W,32,'F');
@@ -2197,14 +2268,14 @@ function generatePDF(project,client,author,opts={}){
         doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(120,110,90);
         let captionText='Grundriss-Übersicht · '+rooms.length+' Raum'+(rooms.length!==1?'e':'');
         if(refLengthGrundrissM&&scaleGrundriss){
-          captionText+=' · Referenzmaß: '+(refLengthGrundrissM*100).toFixed(0)+' cm';
+          captionText+=' · Maßstab: '+(refLengthGrundrissM*100).toFixed(0)+' cm';
         }
         doc.text(captionText,ML,y);
         // Ref legend dot
         if(refLengthGrundrissM&&scaleGrundriss){
           doc.setFillColor(220,50,50);doc.circle(ML+doc.getTextWidth(captionText)+2,y-1,0.8,'F');
           doc.setFontSize(7);doc.setTextColor(180,40,40);
-          doc.text('= Referenzmaß',ML+doc.getTextWidth(captionText)+4,y);
+          doc.text('= Maßstab',ML+doc.getTextWidth(captionText)+4,y);
         }
         y+=6;
       }
@@ -2790,7 +2861,7 @@ function setView(v){
 function startSchnittDraw(){
   schnittClosed=false;
   schnittPts=[];
-  if(!scaleSchnitt&&!scale){alert('Bitte zuerst das Referenzmaß für den Schnitt setzen!');setTool('ref');return;}
+  if(!scaleSchnitt&&!scale){alert('Bitte zuerst den Maßstab für den Schnitt setzen!');setTool('ref');return;}
   if(!scaleSchnitt&&scale)scaleSchnitt=scale;
   schnittDrawMode=true;
   document.getElementById('btn-schnitt-draw').style.display='none';
@@ -2802,7 +2873,7 @@ function startSchnittDraw(){
 }
 function editSchnitt(){
   // Keep existing points, re-enter draw mode
-  if(!scaleSchnitt&&!scale){alert('Bitte zuerst das Referenzmaß für den Schnitt setzen!');return;}
+  if(!scaleSchnitt&&!scale){alert('Bitte zuerst den Maßstab für den Schnitt setzen!');return;}
   schnittClosed=false;
   schnittDrawMode=true;
   document.getElementById('btn-schnitt-draw').style.display='none';
@@ -2811,6 +2882,22 @@ function editSchnitt(){
   document.getElementById('btn-schnitt-undo').style.display=schnittPts.length>0?'':'none';
   document.getElementById('btn-schnitt-cancel').style.display='';
   updStatus();draw();
+}
+async function deletePlan(){
+  const isSchnitt=viewMode==='schnitt';
+  const name=isSchnitt?'Schnitt-Plan':'Grundriss-Plan';
+  if(!confirm(name+' wirklich löschen? Alle gesetzten Punkte bleiben erhalten.'))return;
+  if(isSchnitt){
+    schnittImg=null;schnittX=0;schnittY=0;schnittW=0;schnittH=0;
+    schnittPts=[];schnittClosed=false;schnittDrawMode=false;scaleSchnitt=null;
+    clearPlanCache(true);
+  } else {
+    grundrissImg=null;grundrissX=0;grundrissY=0;grundrissW=0;grundrissH=0;
+    rooms=[];selRoom=null;curPts=[];scaleGrundriss=null;refPts=[];refConfirmed=false;
+    clearPlanCache(false);
+  }
+  document.getElementById('drop-hint').style.display='';
+  updStatus();updSidebar();updToolbarLockState();draw();scheduleSave();
 }
 function cancelSchnitt(){
   schnittDrawMode=false;
@@ -2839,7 +2926,7 @@ function confirmSchnitt(){
   if(schnittPts.length<5)return;
   // Bug fix: im Schnitt-View ist scaleSchnitt die aktive Skala, nicht scale
   const activeScale=scaleSchnitt||scale;
-  if(!activeScale){alert('Bitte zuerst das Referenzmaß im Schnitt setzen!');return;}
+  if(!activeScale){alert('Bitte zuerst das Maßstab im Schnitt setzen!');return;}
   let geo;
   try{
     geo=getSchnittGeometry(schnittPts,activeScale,currentFloor?.dach_config||null);
@@ -2960,6 +3047,8 @@ function initSwipeDelete(){
 // ── TOOLBAR LOCK STATE (no plan = locked) ───────────────────
 function updToolbarLockState(){
   const hasPlan=!!(img||schnittImg);
+  const delPlanBtn=document.getElementById('btn-del-plan');
+  if(delPlanBtn)delPlanBtn.style.display=hasPlan?'':'none';
   const isDach=!!(currentFloor?.dach_config?.aktiv);
   if(isDach && viewMode==='schnitt'){
     const hasRef=refConfirmed||(refPtsSchnitt.length===2);
@@ -3369,8 +3458,8 @@ function previewJsonImport(){
 
   // Show preview
   let lines=[];
-  if(hasRef)lines.push(`✓ Referenzmaß: ${parsed.ref.lengthM} m erkannt`);
-  else lines.push('⚠ Kein Referenzmaß gefunden');
+  if(hasRef)lines.push(`✓ Maßstab: ${parsed.ref.lengthM} m erkannt`);
+  else lines.push('⚠ Kein Maßstab gefunden');
   lines.push(`✓ ${validRooms.length} Räume erkannt: ${validRooms.map(r=>r.name).join(', ')}`);
   if(rooms.length>validRooms.length)lines.push(`⚠ ${rooms.length-validRooms.length} Räume übersprungen (ungültige Punkte)`);
 
@@ -3387,7 +3476,7 @@ async function applyJsonImport(){
 
   const {ref, rooms:importRooms}=_jsonImportParsed;
 
-  // ── Ref setzen ──
+  // ── Maßstab setzen ──
   if(ref){
     const dW=viewMode==='schnitt'?schnittW:imgW;
     const dH=viewMode==='schnitt'?schnittH:imgH;
