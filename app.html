@@ -794,8 +794,12 @@ async function openFloor(id){
   // Wait until the canvas has real dimensions before denormalizing points.
   // Poll with rAF instead of a fixed timeout – safe on slow devices and large PDFs.
   // Lock toolbar immediately while plan is loading
-  ['btn-ref','btn-ref-reset','btn-add-room'].forEach(id=>{
-    const b=document.getElementById(id);if(b)b.classList.add('tb-locked');
+  // Alle Buttons beim Start sperren bis Plan geladen
+  ['btn-ref','btn-ref-reset','btn-add-room','btn-select','btn-rotate',
+   'btn-del-plan','btn-schnitt-draw','btn-schnitt-edit','btn-export',
+   'btn-gdr','btn-sch'].forEach(id=>{
+    const b=document.getElementById(id);
+    if(b){b.classList.add('tb-locked');b.style.display=id.startsWith('btn-gdr')||id.startsWith('btn-sch')||id.startsWith('btn-schnitt')||id==='btn-export'?'none':'';}
   });
   await new Promise(resolve=>{
     const check=()=>{
@@ -2448,7 +2452,7 @@ document.addEventListener('keydown',e=>{
   else if((e.key==='Backspace'||e.key==='Delete')&&selRoom!==null){deleteSelected();e.preventDefault();}
 });
 
-document.addEventListener('keyup',e=>{if(e.code==='Space'){spaceDown=false;cv.style.cursor=tool==='draw'?'crosshair':tool==='ref'?'cell':'default';}});
+document.addEventListener('keyup',e=>{if(e.code==='Space'){spaceDown=false;cv.style.cursor=tool==='draw'?'crosshair':tool==='ref'?'cell':schnittDrawMode?'crosshair':'default';}});
 
 // ── TAP HANDLER ────────────────────────────────────────────
 function handleTap(wx,wy){
@@ -2589,7 +2593,7 @@ cv.addEventListener('mousemove',e=>{
   }
   hoverPt=hitPoint(w.x,w.y);hoverEdge=!hoverPt?hitEdge(w.x,w.y):null;
   const refHit=hitRefPoint(w.x,w.y);
-  cv.style.cursor=refHit!==null?'grab':hoverPt?'grab':hoverEdge?'copy':tool==='draw'?'crosshair':tool==='ref'?'cell':'default';
+  cv.style.cursor=refHit!==null?'grab':hoverPt?'grab':hoverEdge?'copy':tool==='draw'?'crosshair':tool==='ref'?'cell':schnittDrawMode?'crosshair':'default';
   draw();
 });
 cv.addEventListener('mousedown',e=>{
@@ -2944,6 +2948,7 @@ function startSchnittDraw(){
   if(!scaleSchnitt&&!scale){alert('Bitte zuerst den Maßstab für den Schnitt setzen!');setTool('ref');return;}
   if(!scaleSchnitt&&scale)scaleSchnitt=scale;
   schnittDrawMode=true;
+  cv.style.cursor='crosshair';
   document.getElementById('btn-schnitt-draw').style.display='none';
   document.getElementById('btn-schnitt-edit').style.display='none';
   document.getElementById('btn-schnitt-undo').style.display='';
@@ -2981,6 +2986,7 @@ async function deletePlan(){
 }
 function cancelSchnitt(){
   schnittDrawMode=false;
+  cv.style.cursor='default';
   schnittClosed=schnittPts.length>=5;
   const hasExisting=schnittPts.length>=5;
   document.getElementById('btn-schnitt-draw').style.display=hasExisting?'none':'';
