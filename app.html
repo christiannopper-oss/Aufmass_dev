@@ -227,7 +227,8 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
     <span class="floor-project-name" id="floor-project-name"></span>
     <button class="tbtn warn" onclick="openOverlay('project-edit')" style="font-size:10px">✎</button>
     <button class="tbtn danger" onclick="deleteCurrentProject()" style="font-size:10px">✕</button>
-    <button class="tbtn" onclick="auth.logout()" style="font-size:12px;margin-left:auto" title="Abmelden">⎋ Abmelden</button>
+    <a href="/howto.html" target="_blank" class="tbtn" style="font-size:12px;margin-left:auto">? Hilfe</a>
+    <button class="tbtn" onclick="auth.logout()" style="font-size:12px" title="Abmelden">⎋ Abmelden</button>
   </div>
   <div id="floor-list"></div>
   <div id="floor-bottom" style="padding:12px 16px;border-top:1px solid #e0ddd8;display:flex;gap:8px;flex-shrink:0;background:#ffffff;position:sticky;bottom:0;z-index:10">
@@ -3616,8 +3617,60 @@ function updSchnittParam(key,val){
   sb.patch('floors',{dach_config:currentFloor.dach_config},'?id=eq.'+currentFloor.id);
   updSidebar();draw();
 }
+
+// ── ONBOARDING WIZARD ──────────────────────────────────────
+let obCurrentStep=1;
+const OB_KEY='measup_onboarding_done';
+
+function showOnboarding(){
+  if(localStorage.getItem(OB_KEY))return; // bereits gesehen
+  const overlay=document.getElementById('onboarding-overlay');
+  overlay.style.display='flex';
+  obCurrentStep=1;
+  obRender();
+}
+
+function closeOnboarding(){
+  localStorage.setItem(OB_KEY,'1');
+  document.getElementById('onboarding-overlay').style.display='none';
+}
+
+function obNext(){
+  if(obCurrentStep<4){
+    obCurrentStep++;
+    obRender();
+  } else {
+    closeOnboarding();
+  }
+}
+
+function obRender(){
+  // Steps
+  for(let i=1;i<=4;i++){
+    const s=document.getElementById('ob-s'+i);
+    if(s)s.style.display=i===obCurrentStep?'':'none';
+  }
+  // Dots
+  for(let i=1;i<=4;i++){
+    const d=document.getElementById('ob-d'+i);
+    if(d)d.style.background=i===obCurrentStep?'#b8842a':'#3a3a3a';
+  }
+  // Progress bar
+  const prog=document.getElementById('ob-progress');
+  if(prog)prog.style.width=(obCurrentStep/4*100)+'%';
+  // Step indicator
+  const ind=document.getElementById('ob-step-indicator');
+  if(ind)ind.textContent='SCHRITT '+obCurrentStep+' VON 4';
+  // Button text
+  const btn=document.getElementById('ob-next');
+  if(btn)btn.textContent=obCurrentStep===4?'Los geht\'s ✓':'Weiter →';
+  // Skip text
+  const skip=document.getElementById('ob-skip');
+  if(skip)skip.style.visibility=obCurrentStep===4?'hidden':'visible';
+}
 // ── INIT ─────────────────────────────────────────────────
 showScreen('project');
+showOnboarding();
 </script>
 <!-- JSON Import Modal -->
 <div id="json-import-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:600;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)">
@@ -3669,6 +3722,70 @@ showScreen('project');
     <div class="ki-footer" id="ki-footer" style="display:none">
       <button onclick="closeKIOverlay()" style="padding:9px 18px;border:1px solid var(--border);border-radius:var(--radius);background:transparent;cursor:pointer;font-family:inherit;font-size:12px;color:var(--txt2)">Schließen</button>
       <button id="ki-apply-btn" onclick="applyKIResults()" style="padding:9px 24px;border:none;border-radius:var(--radius);background:var(--gold);cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;color:#fff">✓ Auswahl übernehmen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── ONBOARDING WIZARD ────────────────────────────────── -->
+<div id="onboarding-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#1e1b14;border:1px solid #3a3a3a;border-radius:18px;max-width:480px;width:100%;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,.6)">
+    <!-- Progress bar -->
+    <div style="height:3px;background:#2e2e2e">
+      <div id="ob-progress" style="height:100%;background:#b8842a;transition:width .3s;width:25%"></div>
+    </div>
+    <!-- Content -->
+    <div style="padding:36px 32px 28px">
+      <div id="ob-step-indicator" style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#6a6660;font-family:'DM Mono',monospace;margin-bottom:20px">SCHRITT 1 VON 4</div>
+      <!-- Step 1 -->
+      <div class="ob-step" id="ob-s1">
+        <div style="font-size:40px;margin-bottom:16px">📁</div>
+        <h2 style="font-size:22px;font-weight:800;color:#f0ede7;letter-spacing:-.5px;margin-bottom:10px">Projekt anlegen</h2>
+        <p style="font-size:15px;color:#b8b4ac;line-height:1.7">Lege zuerst ein Projekt an — z.B. der Name des Kunden oder die Adresse. Innerhalb eines Projekts kannst du mehrere Geschosse erfassen.</p>
+        <div style="margin-top:20px;background:#252018;border-radius:10px;padding:14px 16px;font-size:13px;color:#6a6660;line-height:1.7">
+          💡 <strong style="color:#b8b4ac">Tipp:</strong> Lege für jeden Auftrag ein eigenes Projekt an. So bleiben deine Aufmaße sauber getrennt.
+        </div>
+      </div>
+      <!-- Step 2 -->
+      <div class="ob-step" id="ob-s2" style="display:none">
+        <div style="font-size:40px;margin-bottom:16px">📐</div>
+        <h2 style="font-size:22px;font-weight:800;color:#f0ede7;letter-spacing:-.5px;margin-bottom:10px">Plan laden & Maßstab setzen</h2>
+        <p style="font-size:15px;color:#b8b4ac;line-height:1.7">Lade den Grundriss als PDF oder Foto. Dann setzt du zwei Punkte auf eine bekannte Strecke — measup berechnet daraus den Maßstab automatisch.</p>
+        <div style="margin-top:20px;background:#252018;border-radius:10px;padding:14px 16px;font-size:13px;color:#6a6660;line-height:1.7">
+          💡 <strong style="color:#b8b4ac">Tipp:</strong> Ideal ist eine Wand oder Tür deren Maß du kennst. Je länger die Referenzstrecke, desto genauer das Ergebnis.
+        </div>
+      </div>
+      <!-- Step 3 -->
+      <div class="ob-step" id="ob-s3" style="display:none">
+        <div style="font-size:40px;margin-bottom:16px">✏️</div>
+        <h2 style="font-size:22px;font-weight:800;color:#f0ede7;letter-spacing:-.5px;margin-bottom:10px">Räume einzeichnen</h2>
+        <p style="font-size:15px;color:#b8b4ac;line-height:1.7">Tippe auf „Raum zeichnen" und setze Punkte um den Raum. Schließe den Raum indem du den ersten Punkt wieder antippst. measup berechnet alle Flächen sofort.</p>
+        <div style="margin-top:20px;background:#252018;border-radius:10px;padding:14px 16px;font-size:13px;color:#6a6660;line-height:1.7">
+          💡 <strong style="color:#b8b4ac">Navigieren:</strong> Zwei Finger zum Zoomen & Wischen. Am Mac: Scroll-Geste oder Leertaste + Drag.
+        </div>
+      </div>
+      <!-- Step 4 -->
+      <div class="ob-step" id="ob-s4" style="display:none">
+        <div style="font-size:40px;margin-bottom:16px">📄</div>
+        <h2 style="font-size:22px;font-weight:800;color:#f0ede7;letter-spacing:-.5px;margin-bottom:10px">PDF exportieren</h2>
+        <p style="font-size:15px;color:#b8b4ac;line-height:1.7">Wenn alle Räume erfasst sind, tippe auf „Export". Du bekommst ein sauberes PDF mit Grundriss, allen Räumen und dem Gesamtergebnis.</p>
+        <div style="margin-top:20px;background:#252018;border-radius:10px;padding:14px 16px;font-size:13px;color:#6a6660;line-height:1.7">
+          💡 <strong style="color:#b8b4ac">Tipp:</strong> Zoome vor dem Export auf den gesamten Grundriss — so erscheint der komplette Plan im PDF.
+        </div>
+      </div>
+    </div>
+    <!-- Footer -->
+    <div style="padding:16px 32px 28px;display:flex;align-items:center;justify-content:space-between">
+      <button id="ob-skip" onclick="closeOnboarding()" style="background:transparent;border:none;color:#6a6660;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;padding:8px 0">Überspringen</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <!-- Step dots -->
+        <div style="display:flex;gap:6px">
+          <div class="ob-dot" id="ob-d1" style="width:6px;height:6px;border-radius:50%;background:#b8842a"></div>
+          <div class="ob-dot" id="ob-d2" style="width:6px;height:6px;border-radius:50%;background:#3a3a3a"></div>
+          <div class="ob-dot" id="ob-d3" style="width:6px;height:6px;border-radius:50%;background:#3a3a3a"></div>
+          <div class="ob-dot" id="ob-d4" style="width:6px;height:6px;border-radius:50%;background:#3a3a3a"></div>
+        </div>
+        <button id="ob-next" onclick="obNext()" style="padding:10px 22px;background:#b8842a;border:none;border-radius:8px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-left:12px">Weiter →</button>
+      </div>
     </div>
   </div>
 </div>
