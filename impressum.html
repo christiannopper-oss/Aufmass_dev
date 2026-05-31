@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Impressum – measup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#b8842a;--dark:#16140f;--dark2:#1e1b14;
+  --txt:#f0ede7;--txt2:#b8b4ac;--txt3:#6a6660;
+  --border:#2e2e2e;--radius:8px;
+}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--dark);color:var(--txt);min-height:100dvh;padding:0;-webkit-font-smoothing:antialiased}
+nav{padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;background:rgba(22,20,15,.9);border-bottom:1px solid var(--border)}
+.nav-brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-wordmark{font-size:18px;letter-spacing:-.3px}
+.nav-wordmark strong{font-weight:700;color:var(--txt)}
+.nav-wordmark span{font-weight:300;color:var(--gold)}
+.back{font-size:13px;color:var(--txt2);text-decoration:none;transition:color .15s}
+.back:hover{color:var(--gold)}
+.wrap{max-width:720px;margin:0 auto;padding:64px 32px 100px}
+h1{font-size:32px;font-weight:800;letter-spacing:-1px;margin-bottom:8px}
+.subtitle{font-size:14px;color:var(--txt3);margin-bottom:56px}
+h2{font-size:13px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--gold);margin:40px 0 12px;font-family:'DM Sans',sans-serif}
+p{font-size:15px;color:var(--txt2);line-height:1.8;margin-bottom:8px}
+a{color:var(--gold);text-decoration:none}
+a:hover{text-decoration:underline}
+.divider{border:none;border-top:1px solid var(--border);margin:48px 0}
+footer{border-top:1px solid var(--border);padding:32px;text-align:center;font-size:12px;color:var(--txt3)}
+footer a{color:var(--txt3);text-decoration:none;margin:0 12px}
+footer a:hover{color:var(--txt2)}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-brand">
+    <svg width="28" height="28" viewBox="0 0 60 60" fill="none">
+      <rect width="60" height="60" rx="13" fill="#b8842a"/>
+      <path d="M13 46 L13 22 L30 38 L47 22 L47 46" stroke="#1a1a1a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M30 38 L30 14 M25 19 L30 14 L35 19" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="nav-wordmark"><strong>meas</strong><span>up</span></span>
+  </a>
+  <a href="/" class="back">← Zurück</a>
+</nav>
+
+<div class="wrap">
+  <h1>Impressum</h1>
+  <p class="subtitle">Angaben gemäß § 5 TMG</p>
+
+  <h2>Betreiber</h2>
+  <p>Christian Nopper<br>
+  Zur Kuckumer Festwiese 1a<br>
+  41812 Erkelenz<br>
+  Deutschland</p>
+
+  <h2>Kontakt</h2>
+  <p>E-Mail: <a href="mailto:info@measup.app">info@measup.app</a></p>
+
+  <hr class="divider">
+
+  <h2>Hinweis zur Beta-Phase</h2>
+  <p>measup befindet sich derzeit in der geschlossenen Beta-Phase. Der Dienst wird kostenlos und ohne Gewähr zur Verfügung gestellt. Eine kommerzielle Nutzung ist in dieser Phase nicht vorgesehen.</p>
+
+  <hr class="divider">
+
+  <h2>Haftung für Inhalte</h2>
+  <p>Die Inhalte dieser Website wurden mit größter Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte können wir jedoch keine Gewähr übernehmen. Als Diensteanbieter sind wir gemäß § 7 Abs. 1 TMG für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich.</p>
+
+  <h2>Haftung für Links</h2>
+  <p>Unser Angebot enthält Links zu externen Websites Dritter, auf deren Inhalte wir keinen Einfluss haben. Deshalb können wir für diese fremden Inhalte auch keine Gewähr übernehmen. Für die Inhalte der verlinkten Seiten ist stets der jeweilige Anbieter oder Betreiber der Seiten verantwortlich.</p>
+
+  <h2>Urheberrecht</h2>
+  <p>Die durch den Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten unterliegen dem deutschen Urheberrecht. Die Vervielfältigung, Bearbeitung, Verbreitung und jede Art der Verwertung außerhalb der Grenzen des Urheberrechtes bedürfen der schriftlichen Zustimmung des jeweiligen Autors bzw. Erstellers.</p>
+
+  <hr class="divider">
+
+  <h2>Streitschlichtung</h2>
+  <p>Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit: <a href="https://ec.europa.eu/consumers/odr" target="_blank">https://ec.europa.eu/consumers/odr</a>.</p>
+  <p>Wir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.</p>
+</div>
+
+<footer>
+  <a href="/">Startseite</a>
+  <a href="/impressum.html">Impressum</a>
+  <a href="/datenschutz.html">Datenschutz</a>
+  <a href="mailto:info@measup.app">Kontakt</a>
+</footer>
+
+</body>
+</html>
