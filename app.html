@@ -834,14 +834,11 @@ async function openFloor(id){
     if(!wrap||!dd)return;
     // Show all other floors – plan availability checked on selection (plan_data too large for list query)
     const others=floors.filter(f=>f.id!==currentFloor.id);
-    console.log('[PlanReuse] floors:',floors.length,'others:',others.length,'wrap:',wrap,'dd:',dd);
     if(others.length>0){
-      dd.innerHTML=others.map(f=>`<button onmousedown="console.log('[PlanReuse] btn clicked',this);window.reuseFloorPlan('${f.id}')" style="display:block;width:100%;padding:10px 14px;background:none;border:none;border-bottom:1px solid var(--border);font-family:inherit;font-size:13px;color:var(--txt);cursor:pointer;text-align:left;transition:background .12s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">📋 ${f.name}</button>`).join('');
+      dd.innerHTML=others.map(f=>`<button onmousedown="window.reuseFloorPlan('${f.id}')" style="display:block;width:100%;padding:10px 14px;background:none;border:none;border-bottom:1px solid var(--border);font-family:inherit;font-size:13px;color:var(--txt);cursor:pointer;text-align:left;transition:background .12s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">📋 ${f.name}</button>`).join('');
       wrap.style.display='';
-      console.log('[PlanReuse] shown, html:', dd.innerHTML.slice(0,80));
     } else {
       wrap.style.display='none';
-      console.log('[PlanReuse] hidden - no other floors');
     }
   })();
   // Wait until the canvas has real dimensions before denormalizing points.
@@ -2801,14 +2798,17 @@ function toggleReuseDropdown(){
   if(!dd)return;
   dd.style.display=dd.style.display==='none'?'block':'none';
 }
-// Close dropdown on outside click
-document.addEventListener('mousedown',e=>{
-  const wrap=document.getElementById('plan-reuse-wrap');
-  if(wrap&&!wrap.contains(e.target)){
-    const dd=document.getElementById('plan-reuse-dropdown');
-    if(dd)dd.style.display='none';
-  }
-});
+// Close dropdown on outside click - guard against multiple registration
+if(!window._reuseDropdownHandlerSet){
+  window._reuseDropdownHandlerSet=true;
+  document.addEventListener('mousedown',e=>{
+    const wrap=document.getElementById('plan-reuse-wrap');
+    if(wrap&&!wrap.contains(e.target)){
+      const dd=document.getElementById('plan-reuse-dropdown');
+      if(dd)dd.style.display='none';
+    }
+  });
+}
 window.reuseFloorPlan = async function reuseFloorPlan(srcFloorId){
   const dd=document.getElementById('plan-reuse-dropdown');
   if(dd)dd.style.display='none';
