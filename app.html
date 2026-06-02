@@ -265,6 +265,9 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
       <div class="tb-sep"></div>
       <button class="tbtn primary" onclick="document.getElementById('fi').click()">↑ Plan laden</button>
       <input id="fi" type="file" accept="application/pdf,image/*" style="display:none" onchange="loadFile(this)">
+      <select id="plan-reuse-select" onchange="reuseFloorPlan(this.value)" style="display:none;padding:8px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-family:inherit;font-size:13px;color:var(--txt2);background:var(--bg2);cursor:pointer;min-height:40px;max-width:180px">
+        <option value="">↩ Plan von Geschoss übernehmen …</option>
+      </select>
       <button class="tbtn" id="btn-rotate" onclick="rotatePlan()">↻ Drehen</button>
       <button class="tbtn warn" id="btn-del-plan" style="display:none" onclick="deletePlan()">✕ Plan löschen</button>
       <div class="tb-sep" id="sep-views" style="display:none"></div>
@@ -822,6 +825,18 @@ async function openFloor(id){
   document.getElementById('exp-author').value=currentProject.author||'';
 
   showScreen('app');
+  // Populate plan-reuse dropdown with other floors that have a plan
+  (()=>{
+    const sel=document.getElementById('plan-reuse-select');
+    if(!sel)return;
+    const others=floors.filter(f=>f.id!==currentFloor.id&&f.plan_data);
+    if(others.length>0){
+      sel.innerHTML='<option value="">↩ Plan von Geschoss übernehmen …</option>'+others.map(f=>`<option value="${f.id}">${f.name}</option>`).join('');
+      sel.style.display='';
+    } else {
+      sel.style.display='none';
+    }
+  })();
   // Wait until the canvas has real dimensions before denormalizing points.
   // Poll with rAF instead of a fixed timeout – safe on slow devices and large PDFs.
   // Lock toolbar immediately while plan is loading
@@ -1051,18 +1066,8 @@ function openOverlay(mode){
     ok.textContent='Speichern';
   } else if(mode==='floor'){
     title.textContent='Neues Geschoss';
-    // Build plan-reuse options from existing floors that have an image
-    const floorsWithImg = floors.filter(f=>f.id!==undefined);
-    const reuseOptions = floorsWithImg.length>0
-      ? `<label>PLAN ÜBERNEHMEN VON</label>
-         <select id="ov-reuse-floor" style="width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:var(--radius);font-family:inherit;font-size:14px;color:var(--txt);background:var(--bg);margin-bottom:14px;outline:none">
-           <option value="">— Neuen Plan laden —</option>
-           ${floorsWithImg.map(f=>`<option value="${f.id}">${f.name}</option>`).join('')}
-         </select>`
-      : '';
     body.innerHTML=`
       <label>BEZEICHNUNG *</label><input id="ov-name" placeholder="z.B. Erdgeschoss, Dachgeschoss">
-      ${reuseOptions}
       <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer" for="ov-dach">
         <input type="checkbox" id="ov-dach" onchange="document.getElementById('ov-height-row').style.display=this.checked?'none':'';" style="width:auto;margin:0;accent-color:var(--gold)">
         <span style="font-size:11px;color:var(--txt2)">Dieses Geschoss hat Dachschrägen</span>
@@ -1124,20 +1129,7 @@ async function overlayConfirm(){
     const hasDach=dachCb&&dachCb.checked;
     const dachData=hasDach?{aktiv:true}:null;
     const defaultHeight=parseFloat(document.getElementById('ov-height')?.value)||2.5;
-    const reuseFloorId=document.getElementById('ov-reuse-floor')?.value||'';
-    // Inherit plan from another floor if selected
-    let inheritedData={};
-    if(reuseFloorId){
-      const src=floors.find(f=>f.id===reuseFloorId);
-      if(src){
-        inheritedData={
-          img_data:src.img_data||null,
-          img_rotation:src.img_rotation||0,
-          img_type:src.img_type||null
-        };
-      }
-    }
-    const res=await sb.post('floors',{project_id:currentProject.id,name,sort_order:floors.length,dach_config:dachData,default_height:defaultHeight,...inheritedData,user_id:auth.getUserId()});
+    const res=await sb.post('floors',{project_id:currentProject.id,name,sort_order:floors.length,dach_config:dachData,default_height:defaultHeight,user_id:auth.getUserId()});
     if(res&&res[0]){floors.push(res[0]);renderFloors();}
   }
   closeOverlay();
@@ -2789,6 +2781,33 @@ cv.addEventListener('pointerup',e=>{if(e.pointerType!=='mouse')lastTouchEnd=Date
 
 // ── PDF LOAD ──────────────────────────────────────────────
 function handleDrop(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf')loadPDF(f);}
+async function reuseFloorPlan(srcFloorId){
+  const sel=document.getElementById('plan-reuse-select');
+  if(sel)sel.value=''; // reset dropdown
+  if(!srcFloorId||!currentFloor)return;
+  // Load source floor's plan_data from floors array (already loaded)
+  let srcFloor=floors.find(f=>f.id===srcFloorId);
+  // If not in array, fetch from DB
+  if(!srcFloor){
+    const res=await sb.get('floors','?id=eq.'+srcFloorId+'&select=id,plan_data,schnitt_plan_data,img_rotation,grundriss_page,schnitt_page');
+    srcFloor=res&&res[0]?res[0]:null;
+  }
+  if(!srcFloor){alert('Geschoss nicht gefunden.');return;}
+  const src=srcFloor.plan_data||null;
+  if(!src){alert('Dieses Geschoss hat noch keinen Plan.');return;}
+  // Apply to current floor
+  const i=new Image();
+  await new Promise(res=>{i.onload=res;i.src=src;});
+  const r=wrap.getBoundingClientRect();
+  const ratio=Math.min((r.width-40)/i.width,(r.height-40)/i.height);
+  img=i;imgW=i.width*ratio;imgH=i.height*ratio;
+  imgX=(r.width-imgW)/2;imgY=(r.height-imgH)/2;
+  zoom=1;panX=0;panY=0;
+  document.getElementById('drop-hint').style.display='none';
+  await savePlanSnapshot(src,false,1);
+  updPageNav();draw();updToolbarLockState();updStatus();
+}
+
 function loadFile(inp){
   if(!inp.files[0])return;
   // ensure we load into the correct view
