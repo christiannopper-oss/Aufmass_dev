@@ -208,6 +208,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
     <div style="display:flex;align-items:center;gap:10px;margin-left:auto">
       <span style="font-size:12px;color:var(--txt3)" id="user-email-display"></span>
       <a href="/howto.html" target="_blank" class="tbtn" style="font-size:13px;padding:8px 14px">? Hilfe</a>
+      <button class="tbtn" onclick="openProfileOverlay()" style="font-size:13px;padding:8px 14px" title="Firmenprofil">⚙ Profil</button>
       <button class="tbtn" onclick="auth.logout()" style="font-size:13px;padding:8px 14px" title="Abmelden">⎋ Abmelden</button>
       <button class="btn-new" onclick="openOverlay('project')">+ Neues Projekt</button>
     </div>
@@ -723,14 +724,39 @@ function renderFloors(){
   if(!floors.length){list.innerHTML='<div class="empty-state">Noch keine Geschosse.<br>Tippe auf „+ Geschoss hinzufügen".</div>';return;}
   list.innerHTML=floors.map((f,i)=>`
     <div class="floor-card" onclick="openFloor('${f.id}')">
-      <div>
-        <div class="floor-card-name">${f.name}</div>
+      <div style="flex:1;min-width:0">
+        <div class="floor-card-name" id="floor-name-${f.id}" ondblclick="startRenameFloor('${f.id}');event.stopPropagation()" title="Doppelklick zum Umbenennen">${f.name}</div>
         <div class="floor-card-meta">${f.scale_px_per_m?'Kalibriert ✓':'Nicht kalibriert'}${f.dach_config&&f.dach_config.aktiv?` · 🏠 Dach: Kniestock ${f.dach_config.kniestockH}m / First ${f.dach_config.firstH}m`:''}</div>
       </div>
       <div class="floor-card-right">
+        <button class="floor-del" title="Geschoss umbenennen" onclick="startRenameFloor('${f.id}');event.stopPropagation()" style="border-color:rgba(184,132,42,.3);color:var(--gold);font-size:13px">✎</button>
         <span class="floor-del" onclick="deleteFloor('${f.id}');event.stopPropagation()">✕</span>
       </div>
     </div>`).join('');
+}
+
+async function startRenameFloor(id){
+  const f=floors.find(x=>x.id===id);
+  if(!f)return;
+  const span=document.getElementById('floor-name-'+id);
+  if(!span)return;
+  const input=document.createElement('input');
+  input.value=f.name;
+  input.style.cssText='font-size:14px;font-weight:600;font-family:inherit;border:1px solid var(--gold);border-radius:4px;padding:2px 6px;width:100%;outline:none;background:var(--bg2);color:var(--txt)';
+  span.replaceWith(input);
+  input.focus();input.select();
+  const commit=async()=>{
+    const n=input.value.trim()||f.name;
+    await sb.patch('floors',{name:n},'?id=eq.'+id);
+    f.name=n;
+    renderFloors();
+    if(currentFloor&&currentFloor.id===id){
+      currentFloor.name=n;
+      document.getElementById('current-floor-label').textContent=currentProject.name+' / '+n;
+    }
+  };
+  input.addEventListener('blur',commit);
+  input.addEventListener('keydown',e=>{if(e.key==='Enter')input.blur();if(e.key==='Escape'){input.removeEventListener('blur',commit);renderFloors();}});
 }
 
 async function openFloor(id){
@@ -1025,8 +1051,18 @@ function openOverlay(mode){
     ok.textContent='Speichern';
   } else if(mode==='floor'){
     title.textContent='Neues Geschoss';
+    // Build plan-reuse options from existing floors that have an image
+    const floorsWithImg = floors.filter(f=>f.id!==undefined);
+    const reuseOptions = floorsWithImg.length>0
+      ? `<label>PLAN ÜBERNEHMEN VON</label>
+         <select id="ov-reuse-floor" style="width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:var(--radius);font-family:inherit;font-size:14px;color:var(--txt);background:var(--bg);margin-bottom:14px;outline:none">
+           <option value="">— Neuen Plan laden —</option>
+           ${floorsWithImg.map(f=>`<option value="${f.id}">${f.name}</option>`).join('')}
+         </select>`
+      : '';
     body.innerHTML=`
       <label>BEZEICHNUNG *</label><input id="ov-name" placeholder="z.B. Erdgeschoss, Dachgeschoss">
+      ${reuseOptions}
       <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer" for="ov-dach">
         <input type="checkbox" id="ov-dach" onchange="document.getElementById('ov-height-row').style.display=this.checked?'none':'';" style="width:auto;margin:0;accent-color:var(--gold)">
         <span style="font-size:11px;color:var(--txt2)">Dieses Geschoss hat Dachschrägen</span>
@@ -1038,6 +1074,32 @@ function openOverlay(mode){
   }
   overlay.style.display='flex';
   setTimeout(()=>document.getElementById('ov-name')?.focus(),50);
+}
+
+function openProfileOverlay(){
+  const p=JSON.parse(localStorage.getItem('measup_profile')||'{}');
+  document.getElementById('prof-company').value=p.company||'';
+  document.getElementById('prof-name').value=p.name||'';
+  document.getElementById('prof-street').value=p.street||'';
+  document.getElementById('prof-city').value=p.city||'';
+  document.getElementById('prof-phone').value=p.phone||'';
+  document.getElementById('prof-email').value=p.email||'';
+  document.getElementById('prof-web').value=p.web||'';
+  document.getElementById('profile-overlay').style.display='flex';
+  setTimeout(()=>document.getElementById('prof-company').focus(),50);
+}
+function saveProfile(){
+  const p={
+    company:document.getElementById('prof-company').value.trim(),
+    name:document.getElementById('prof-name').value.trim(),
+    street:document.getElementById('prof-street').value.trim(),
+    city:document.getElementById('prof-city').value.trim(),
+    phone:document.getElementById('prof-phone').value.trim(),
+    email:document.getElementById('prof-email').value.trim(),
+    web:document.getElementById('prof-web').value.trim()
+  };
+  localStorage.setItem('measup_profile',JSON.stringify(p));
+  document.getElementById('profile-overlay').style.display='none';
 }
 
 function closeOverlay(){document.getElementById('overlay').style.display='none';}
@@ -1062,7 +1124,20 @@ async function overlayConfirm(){
     const hasDach=dachCb&&dachCb.checked;
     const dachData=hasDach?{aktiv:true}:null;
     const defaultHeight=parseFloat(document.getElementById('ov-height')?.value)||2.5;
-    const res=await sb.post('floors',{project_id:currentProject.id,name,sort_order:floors.length,dach_config:dachData,default_height:defaultHeight,user_id:auth.getUserId()});
+    const reuseFloorId=document.getElementById('ov-reuse-floor')?.value||'';
+    // Inherit plan from another floor if selected
+    let inheritedData={};
+    if(reuseFloorId){
+      const src=floors.find(f=>f.id===reuseFloorId);
+      if(src){
+        inheritedData={
+          img_data:src.img_data||null,
+          img_rotation:src.img_rotation||0,
+          img_type:src.img_type||null
+        };
+      }
+    }
+    const res=await sb.post('floors',{project_id:currentProject.id,name,sort_order:floors.length,dach_config:dachData,default_height:defaultHeight,...inheritedData,user_id:auth.getUserId()});
     if(res&&res[0]){floors.push(res[0]);renderFloors();}
   }
   closeOverlay();
@@ -2073,9 +2148,9 @@ function updSidebar(){
       :`<span style="font-size:10px;color:var(--txt3);opacity:.6">Kalibrierung fehlt</span>`;
     return`<div class="rc${sel?' sel':''}" onclick="selR(${i})">
       <div class="rn"><span>${rm.name}</span><div style="display:flex;gap:4px">
-        <button class="edit-btn" title="Punkte bearbeiten" onclick="activateSelectForRoom(${i});event.stopPropagation()">⊹</button>
-        <button class="edit-btn" onclick="openEditRoom(${i});event.stopPropagation()">✎</button>
-        <button class="edit-btn" style="border-color:#c0392b33;color:#c0392b" onclick="delRoomByIdx(${i});event.stopPropagation()">✕</button>
+        <button class="edit-btn" title="Maße bearbeiten" onclick="activateSelectForRoom(${i});event.stopPropagation()" style="padding:4px 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="8" cy="6" r="2.2" fill="currentColor" stroke="none"/><circle cx="16" cy="12" r="2.2" fill="currentColor" stroke="none"/><circle cx="10" cy="18" r="2.2" fill="currentColor" stroke="none"/></svg></button>
+        <button class="edit-btn" title="Name bearbeiten" onclick="openEditRoom(${i});event.stopPropagation()">✎</button>
+        <button class="edit-btn" title="Raum löschen" style="border-color:#c0392b33;color:#c0392b" onclick="delRoomByIdx(${i});event.stopPropagation()">✕</button>
       </div></div>
       ${!sel?`<div style="margin-top:2px">${preview}</div>`:`
       <div class="rs" style="margin-top:6px">Höhe: <b>${rm.height.toFixed(2)} m</b><br>${mainStats}</div>
@@ -3711,6 +3786,24 @@ showOnboarding();
 </div>
 
 <!-- KI Analyse Overlay -->
+<!-- ── PROFIL-OVERLAY ── -->
+<div id="profile-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:500;backdrop-filter:blur(2px)">
+  <div class="overlay-modal" style="min-width:340px;max-width:94vw">
+    <h3>Firmenprofil</h3>
+    <label>FIRMENNAME</label><input id="prof-company" placeholder="z.B. Malerbetrieb Müller GmbH">
+    <label>INHABER / ANSPRECHPARTNER</label><input id="prof-name" placeholder="z.B. Hans Müller">
+    <label>STRASSE & HAUSNUMMER</label><input id="prof-street" placeholder="z.B. Musterstraße 12">
+    <label>PLZ & ORT</label><input id="prof-city" placeholder="z.B. 41812 Erkelenz">
+    <label>TELEFON</label><input id="prof-phone" placeholder="z.B. 02431 123456">
+    <label>E-MAIL</label><input id="prof-email" type="email" placeholder="z.B. info@malerbetrieb.de">
+    <label>WEBSEITE</label><input id="prof-web" placeholder="z.B. www.malerbetrieb.de">
+    <div style="display:flex;gap:10px;margin-top:6px">
+      <button class="bok" onclick="saveProfile()">Speichern</button>
+      <button class="bcancel" onclick="document.getElementById('profile-overlay').style.display='none'">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
 <div id="ki-overlay">
   <div id="ki-modal">
     <h3>✦ KI-Erkennung <span class="ki-badge">ChatGPT Vision</span></h3>
