@@ -832,8 +832,8 @@ async function openFloor(id){
     const wrap=document.getElementById('plan-reuse-wrap');
     const dd=document.getElementById('plan-reuse-dropdown');
     if(!wrap||!dd)return;
-    // Show floors that have any plan (grundriss or schnitt)
-    const others=floors.filter(f=>f.id!==currentFloor.id&&(f.plan_data||f.schnitt_plan_data));
+    // Show all other floors – plan availability checked on selection (plan_data too large for list query)
+    const others=floors.filter(f=>f.id!==currentFloor.id);
     if(others.length>0){
       dd.innerHTML=others.map(f=>`<button data-floor-id="${f.id}" class="reuse-item" style="display:block;width:100%;padding:10px 14px;background:none;border:none;border-bottom:1px solid var(--border);font-family:inherit;font-size:13px;color:var(--txt);cursor:pointer;text-align:left;transition:background .12s">${f.name}</button>`).join('');
       wrap.style.display='';
@@ -2819,11 +2819,9 @@ async function reuseFloorPlan(srcFloorId){
   if(!srcFloorId||!currentFloor)return;
   const isSchnitt=viewMode==='schnitt';
   // Load source floor data
-  let srcFloor=floors.find(f=>f.id===srcFloorId);
-  if(!srcFloor){
-    const res=await sb.get('floors','?id=eq.'+srcFloorId+'&select=id,plan_data,schnitt_plan_data,img_rotation,schnitt_rotation,grundriss_page,schnitt_page');
-    srcFloor=res&&res[0]?res[0]:null;
-  }
+  // Always fetch with explicit select – plan_data not included in loadFloors list query
+  const _res=await sb.get('floors','?id=eq.'+srcFloorId+'&select=id,plan_data,schnitt_plan_data,img_rotation,schnitt_rotation,grundriss_page,schnitt_page');
+  let srcFloor=_res&&_res[0]?_res[0]:null;
   if(!srcFloor){alert('Geschoss nicht gefunden.');return;}
   // Pick the right plan source depending on current view
   const src = isSchnitt
