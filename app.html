@@ -276,7 +276,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
     </div>
     <!-- Zeile 3: Werkzeuge -->
     <div class="tb-row" id="tb-tools">
-      <span class="tb-label">Maßstab</span>
+      <span class="tb-label" style="text-transform:none">MASSSTAB</span>
       <div class="tb-group">
         <button class="tbtn" id="btn-ref" onclick="setTool('ref')">Maßstab setzen</button>
         <button class="tbtn confirm" id="btn-ref-confirm" style="display:none" onclick="confirmRef()">✓ Bestätigen</button>
@@ -881,6 +881,14 @@ async function openFloor(id){
   const _sepV=document.getElementById('sep-views');if(_sepV)_sepV.style.display=_isDach?'':'none';
   const _grpD=document.getElementById('grp-dach');if(_grpD)_grpD.style.display=_isDach?'flex':'none';
   const _sepD=document.getElementById('sep-dach');if(_sepD)_sepD.style.display=_isDach?'':'none';
+  // Explicitly show/hide grp-raum based on viewMode (setView is not called on floor open)
+  const _grpRaum=document.getElementById('grp-raum');
+  const _sepRaum=document.getElementById('sep-raum');
+  const _lblRaum=document.getElementById('lbl-raum');
+  const _showRaum=viewMode!=='schnitt';
+  if(_grpRaum)_grpRaum.style.display=_showRaum?'':'none';
+  if(_sepRaum)_sepRaum.style.display=_showRaum?'':'none';
+  if(_lblRaum)_lblRaum.style.display=_showRaum?'':'none';
   updPageNav();updStatus();updSidebar();syncDebugState();draw();updToolbarLockState();
 }
 
@@ -3231,6 +3239,9 @@ function updToolbarLockState(){
   const hasPlan=!!(img||schnittImg);
   const delPlanBtn=document.getElementById('btn-del-plan');
   if(delPlanBtn)delPlanBtn.style.display=hasPlan?'':'none';
+  // btn-rotate: always unlock when plan present
+  const rotBtn=document.getElementById('btn-rotate');
+  if(rotBtn)rotBtn.classList.toggle('tb-locked',!hasPlan);
   const isDach=!!(currentFloor?.dach_config?.aktiv);
   if(isDach && viewMode==='schnitt'){
     const hasRef=refConfirmed||(refPtsSchnitt.length===2);
