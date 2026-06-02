@@ -205,8 +205,12 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
       <span style="letter-spacing:-0.5px"><span style="font-weight:700;color:var(--txt)">meas</span><span style="font-weight:300;color:var(--gold)">up</span></span>
       <small>Aufmaß &amp; Flächenberechnung</small>
     </span>
-    <span style="font-size:12px;color:var(--txt3);margin-left:8px" id="user-email-display"></span>
-    <button class="btn-new" onclick="openOverlay('project')">+ Neues Projekt</button>
+    <div style="display:flex;align-items:center;gap:10px;margin-left:auto">
+      <span style="font-size:12px;color:var(--txt3)" id="user-email-display"></span>
+      <a href="/howto.html" target="_blank" class="tbtn" style="font-size:13px;padding:8px 14px">? Hilfe</a>
+      <button class="tbtn" onclick="auth.logout()" style="font-size:13px;padding:8px 14px" title="Abmelden">⎋ Abmelden</button>
+      <button class="btn-new" onclick="openOverlay('project')">+ Neues Projekt</button>
+    </div>
   </div>
   <div style="padding:12px 24px 0;flex-shrink:0">
     <input id="proj-search" type="text" placeholder="🔍  Projekt suchen …" oninput="filterProjects()"
