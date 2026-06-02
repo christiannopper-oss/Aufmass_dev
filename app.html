@@ -108,6 +108,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 .rc.sel .rn span:first-child{color:var(--gold)}
 .edit-btn{font-size:12px;color:var(--txt2);border:1px solid var(--border2);border-radius:var(--radius);padding:5px 10px;background:transparent;cursor:pointer;font-family:inherit;flex-shrink:0;transition:all .12s;min-height:32px}
 .edit-btn:hover{color:var(--gold);border-color:var(--gold)}
+.edit-btn.active{color:var(--gold);border-color:var(--gold);background:var(--gold-bg2);}
 .rs{font-size:12px;color:var(--txt2);line-height:2.0}
 .rs b{color:var(--txt)}
 .rc.sel .rs b{color:var(--gold)}
@@ -265,9 +266,10 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
       <div class="tb-sep"></div>
       <button class="tbtn primary" onclick="document.getElementById('fi').click()">↑ Plan laden</button>
       <input id="fi" type="file" accept="application/pdf,image/*" style="display:none" onchange="loadFile(this)">
-      <select id="plan-reuse-select" onchange="reuseFloorPlan(this.value)" style="display:none;padding:8px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-family:inherit;font-size:13px;color:var(--txt2);background:var(--bg2);cursor:pointer;min-height:40px;max-width:180px">
-        <option value="">↩ Plan von Geschoss übernehmen …</option>
-      </select>
+      <div id="plan-reuse-wrap" style="display:none;position:relative">
+        <button class="tbtn" id="plan-reuse-btn" onclick="toggleReuseDropdown()" style="display:flex;align-items:center;gap:6px">↩ Plan übernehmen <span style="font-size:10px;opacity:.6">▾</span></button>
+        <div id="plan-reuse-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg);z-index:200;min-width:200px;overflow:hidden"></div>
+      </div>
       <button class="tbtn" id="btn-rotate" onclick="rotatePlan()">↻ Drehen</button>
       <button class="tbtn warn" id="btn-del-plan" style="display:none" onclick="deletePlan()">✕ Plan löschen</button>
       <div class="tb-sep" id="sep-views" style="display:none"></div>
@@ -827,14 +829,16 @@ async function openFloor(id){
   showScreen('app');
   // Populate plan-reuse dropdown with other floors that have a plan
   (()=>{
-    const sel=document.getElementById('plan-reuse-select');
-    if(!sel)return;
-    const others=floors.filter(f=>f.id!==currentFloor.id&&f.plan_data);
+    const wrap=document.getElementById('plan-reuse-wrap');
+    const dd=document.getElementById('plan-reuse-dropdown');
+    if(!wrap||!dd)return;
+    // Show floors that have any plan (grundriss or schnitt)
+    const others=floors.filter(f=>f.id!==currentFloor.id&&(f.plan_data||f.schnitt_plan_data));
     if(others.length>0){
-      sel.innerHTML='<option value="">↩ Plan von Geschoss übernehmen …</option>'+others.map(f=>`<option value="${f.id}">${f.name}</option>`).join('');
-      sel.style.display='';
+      dd.innerHTML=others.map(f=>`<button onclick="reuseFloorPlan('${f.id}')" style="display:block;width:100%;padding:10px 14px;background:none;border:none;border-bottom:1px solid var(--border);font-family:inherit;font-size:13px;color:var(--txt);cursor:pointer;text-align:left;transition:background .12s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='none'">${f.name}</button>`).join('');
+      wrap.style.display='';
     } else {
-      sel.style.display='none';
+      wrap.style.display='none';
     }
   })();
   // Wait until the canvas has real dimensions before denormalizing points.
@@ -2148,7 +2152,7 @@ function updSidebar(){
       :`<span style="font-size:10px;color:var(--txt3);opacity:.6">Kalibrierung fehlt</span>`;
     return`<div class="rc${sel?' sel':''}" onclick="selR(${i})">
       <div class="rn"><span>${rm.name}</span><div style="display:flex;gap:4px">
-        <button class="edit-btn" title="Maße bearbeiten" onclick="activateSelectForRoom(${i});event.stopPropagation()" style="padding:4px 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="8" cy="6" r="2.2" fill="currentColor" stroke="none"/><circle cx="16" cy="12" r="2.2" fill="currentColor" stroke="none"/><circle cx="10" cy="18" r="2.2" fill="currentColor" stroke="none"/></svg></button>
+        <button class="${sel&&tool==='select'?'edit-btn active':'edit-btn'}" title="Maße bearbeiten" onclick="activateSelectForRoom(${i});event.stopPropagation()" style="padding:4px 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="8" cy="6" r="2.2" fill="currentColor" stroke="none"/><circle cx="16" cy="12" r="2.2" fill="currentColor" stroke="none"/><circle cx="10" cy="18" r="2.2" fill="currentColor" stroke="none"/></svg></button>
         <button class="edit-btn" title="Name bearbeiten" onclick="openEditRoom(${i});event.stopPropagation()">✎</button>
         <button class="edit-btn" title="Raum löschen" style="border-color:#c0392b33;color:#c0392b" onclick="delRoomByIdx(${i});event.stopPropagation()">✕</button>
       </div></div>
@@ -2789,30 +2793,51 @@ cv.addEventListener('pointerup',e=>{if(e.pointerType!=='mouse')lastTouchEnd=Date
 
 // ── PDF LOAD ──────────────────────────────────────────────
 function handleDrop(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf')loadPDF(f);}
+function toggleReuseDropdown(){
+  const dd=document.getElementById('plan-reuse-dropdown');
+  if(!dd)return;
+  dd.style.display=dd.style.display==='none'?'block':'none';
+}
+// Close dropdown on outside click
+document.addEventListener('click',e=>{
+  const wrap=document.getElementById('plan-reuse-wrap');
+  if(wrap&&!wrap.contains(e.target)){
+    const dd=document.getElementById('plan-reuse-dropdown');
+    if(dd)dd.style.display='none';
+  }
+});
 async function reuseFloorPlan(srcFloorId){
-  const sel=document.getElementById('plan-reuse-select');
-  if(sel)sel.value=''; // reset dropdown
+  const dd=document.getElementById('plan-reuse-dropdown');
+  if(dd)dd.style.display='none';
   if(!srcFloorId||!currentFloor)return;
-  // Load source floor's plan_data from floors array (already loaded)
+  const isSchnitt=viewMode==='schnitt';
+  // Load source floor data
   let srcFloor=floors.find(f=>f.id===srcFloorId);
-  // If not in array, fetch from DB
   if(!srcFloor){
-    const res=await sb.get('floors','?id=eq.'+srcFloorId+'&select=id,plan_data,schnitt_plan_data,img_rotation,grundriss_page,schnitt_page');
+    const res=await sb.get('floors','?id=eq.'+srcFloorId+'&select=id,plan_data,schnitt_plan_data,img_rotation,schnitt_rotation,grundriss_page,schnitt_page');
     srcFloor=res&&res[0]?res[0]:null;
   }
   if(!srcFloor){alert('Geschoss nicht gefunden.');return;}
-  const src=srcFloor.plan_data||null;
-  if(!src){alert('Dieses Geschoss hat noch keinen Plan.');return;}
-  // Apply to current floor
+  // Pick the right plan source depending on current view
+  const src = isSchnitt
+    ? (srcFloor.schnitt_plan_data||srcFloor.plan_data||null)
+    : (srcFloor.plan_data||null);
+  if(!src){alert('Dieses Geschoss hat noch keinen '+(isSchnitt?'Schnitt-':'')+'Plan.');return;}
   const i=new Image();
   await new Promise(res=>{i.onload=res;i.src=src;});
-  const r=wrap.getBoundingClientRect();
+  const r=document.getElementById('cwrap').getBoundingClientRect();
   const ratio=Math.min((r.width-40)/i.width,(r.height-40)/i.height);
-  img=i;imgW=i.width*ratio;imgH=i.height*ratio;
-  imgX=(r.width-imgW)/2;imgY=(r.height-imgH)/2;
-  zoom=1;panX=0;panY=0;
-  document.getElementById('drop-hint').style.display='none';
-  await savePlanSnapshot(src,false,1);
+  if(isSchnitt){
+    schnittImg=i;schnittW=i.width*ratio;schnittH=i.height*ratio;
+    schnittX=(r.width-schnittW)/2;schnittY=(r.height-schnittH)/2;
+    await savePlanSnapshot(src,true,1);
+  } else {
+    img=i;imgW=i.width*ratio;imgH=i.height*ratio;
+    imgX=(r.width-imgW)/2;imgY=(r.height-imgH)/2;
+    zoom=1;panX=0;panY=0;
+    document.getElementById('drop-hint').style.display='none';
+    await savePlanSnapshot(src,false,1);
+  }
   updPageNav();draw();updToolbarLockState();updStatus();
 }
 
