@@ -266,10 +266,9 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
       <div class="tb-sep"></div>
       <button class="tbtn primary" onclick="document.getElementById('fi').click()">↑ Plan laden</button>
       <input id="fi" type="file" accept="application/pdf,image/*" style="display:none" onchange="loadFile(this)">
-      <div id="plan-reuse-wrap" style="display:none;position:relative">
-        <button class="tbtn" id="plan-reuse-btn" onclick="toggleReuseDropdown()" style="display:flex;align-items:center;gap:6px">↩ Plan übernehmen <span style="font-size:10px;opacity:.6">▾</span></button>
-        <div id="plan-reuse-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg);z-index:200;min-width:200px;overflow:hidden"></div>
-      </div>
+      <select id="plan-reuse-wrap" onchange="if(this.value){window.reuseFloorPlan(this.value);this.value=''}" style="display:none;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--txt2);background:var(--bg2);cursor:pointer;min-height:40px;height:40px">
+        <option value="">↩ Plan übernehmen …</option>
+      </select>
       <button class="tbtn" id="btn-rotate" onclick="rotatePlan()">↻ Drehen</button>
       <button class="tbtn warn" id="btn-del-plan" style="display:none" onclick="deletePlan()">✕ Plan löschen</button>
       <div class="tb-sep" id="sep-views" style="display:none"></div>
@@ -827,18 +826,16 @@ async function openFloor(id){
   document.getElementById('exp-author').value=currentProject.author||'';
 
   showScreen('app');
-  // Populate plan-reuse dropdown with other floors that have a plan
+  // Populate plan-reuse select with other floors
   (()=>{
-    const wrap=document.getElementById('plan-reuse-wrap');
-    const dd=document.getElementById('plan-reuse-dropdown');
-    if(!wrap||!dd)return;
-    // Show all other floors – plan availability checked on selection (plan_data too large for list query)
+    const sel=document.getElementById('plan-reuse-wrap');
+    if(!sel)return;
     const others=floors.filter(f=>f.id!==currentFloor.id);
     if(others.length>0){
-      dd.innerHTML=others.map(f=>`<button onmousedown="window.reuseFloorPlan('${f.id}')" style="display:block;width:100%;padding:10px 14px;background:none;border:none;border-bottom:1px solid var(--border);font-family:inherit;font-size:13px;color:var(--txt);cursor:pointer;text-align:left;transition:background .12s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">📋 ${f.name}</button>`).join('');
-      wrap.style.display='';
+      sel.innerHTML='<option value="">\u21A9 Plan \u00FCbernehmen \u2026</option>'+others.map(f=>`<option value="${f.id}">${f.name}</option>`).join('');
+      sel.style.display='';
     } else {
-      wrap.style.display='none';
+      sel.style.display='none';
     }
   })();
   // Wait until the canvas has real dimensions before denormalizing points.
@@ -2793,25 +2790,8 @@ cv.addEventListener('pointerup',e=>{if(e.pointerType!=='mouse')lastTouchEnd=Date
 
 // ── PDF LOAD ──────────────────────────────────────────────
 function handleDrop(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf')loadPDF(f);}
-function toggleReuseDropdown(){
-  const dd=document.getElementById('plan-reuse-dropdown');
-  if(!dd)return;
-  dd.style.display=dd.style.display==='none'?'block':'none';
-}
-// Close dropdown on outside click - guard against multiple registration
-if(!window._reuseDropdownHandlerSet){
-  window._reuseDropdownHandlerSet=true;
-  document.addEventListener('mousedown',e=>{
-    const wrap=document.getElementById('plan-reuse-wrap');
-    if(wrap&&!wrap.contains(e.target)){
-      const dd=document.getElementById('plan-reuse-dropdown');
-      if(dd)dd.style.display='none';
-    }
-  });
-}
+// plan-reuse uses native select - no dropdown handler needed
 window.reuseFloorPlan = async function reuseFloorPlan(srcFloorId){
-  const dd=document.getElementById('plan-reuse-dropdown');
-  if(dd)dd.style.display='none';
   if(!srcFloorId||!currentFloor)return;
   const isSchnitt=viewMode==='schnitt';
   // Load source floor data
