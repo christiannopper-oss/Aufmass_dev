@@ -355,6 +355,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
       <div class="mwrap" id="mw-room" style="display:none;left:40px;top:60px">
         <div class="modal"><div class="mdrag" id="md-room"><span class="mtitle" id="room-modal-title">Raum erfassen</span><span style="font-size:9px;color:#555">ZIEHEN</span></div>
         <div class="mbody">
+          <div id="m-ocr-chips" style="display:none;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px;min-height:0"></div>
           <label>BEZEICHNUNG</label><input id="m-name" placeholder="z.B. Kinderzimmer" oninput="document.getElementById('m-ok').disabled=!this.value.trim()">
           <div id="m-h-row"><label>RAUMHÖHE (m)</label><input id="m-h" type="number" value="2.50" step="0.01" min="1" max="10"></div>
           <div class="mbtns"><button class="bcl" onclick="closeRoom(false)">Abbrechen</button><button class="bok" id="m-ok" onclick="closeRoom(true)">Speichern</button></div>
@@ -2266,6 +2267,54 @@ function centerModal(id){
   mw.style.left=left+'px';
   mw.style.top=top+'px';
 }
+async function runOCRforRoom(){
+  const chipsEl=document.getElementById('m-ocr-chips');
+  try{
+    const key=getApiKey();
+    if(!key){if(chipsEl)chipsEl.style.display='none';return;}
+    const activeImg=viewMode==='schnitt'?schnittImg:img;
+    if(!activeImg){if(chipsEl)chipsEl.style.display='none';return;}
+    // Render plan to small canvas for OCR (600px wide is enough)
+    const SCALE=Math.min(600/(activeImg.naturalWidth||activeImg.width),1);
+    const oc=document.createElement('canvas');
+    oc.width=Math.round((activeImg.naturalWidth||activeImg.width)*SCALE);
+    oc.height=Math.round((activeImg.naturalHeight||activeImg.height)*SCALE);
+    const ox=oc.getContext('2d');
+    ox.fillStyle='#ffffff';ox.fillRect(0,0,oc.width,oc.height);
+    ox.drawImage(activeImg,0,0,oc.width,oc.height);
+    const b64=oc.toDataURL('image/jpeg',0.80).split(',')[1];
+
+    // Already-used room names to exclude
+    const usedNames=rooms.map(r=>r.name.toLowerCase());
+
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({
+        model:'claude-haiku-4-5-20251001',
+        max_tokens:200,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
+          {type:'text',text:'Dies ist ein Grundrissplan. Erkenne alle Raumnamen/Raumbezeichnungen die im Plan eingetragen sind (z.B. Küche, Bad, Wohnzimmer, Flur, WC, Kammer, Garage usw). Antworte NUR mit einem JSON-Array von Strings, keine Erklärung, keine Markdown-Backticks. Beispiel: ["Küche","Bad","Flur"]. Maximal 12 Namen.'}
+        ]}]
+      })
+    });
+    const data=await resp.json();
+    const text=(data.content&&data.content[0]&&data.content[0].text)||'[]';
+    let names=[];
+    try{names=JSON.parse(text.replace(/```json|```/g,'').trim());}catch(e){names=[];}
+    // Filter: remove already-used names, keep unique
+    names=names.filter((n,i)=>n&&typeof n==='string'&&!usedNames.includes(n.toLowerCase())&&names.indexOf(n)===i).slice(0,10);
+    if(!chipsEl)return;
+    if(!names.length){chipsEl.style.display='none';return;}
+    chipsEl.innerHTML=names.map(n=>`<button type="button" onclick="document.getElementById('m-name').value='${n.replace(/'/g,"\'")}';document.getElementById('m-ok').disabled=false;this.parentElement.querySelectorAll('button').forEach(b=>b.style.background='');this.style.background='var(--gold-bg2)';this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" style="padding:4px 10px;border:1px solid var(--border2);border-radius:20px;background:var(--bg3);font-family:inherit;font-size:12px;color:var(--txt2);cursor:pointer;transition:all .12s;white-space:nowrap">${n}</button>`).join('');
+    chipsEl.style.display='flex';
+  }catch(e){
+    console.warn('OCR error:',e);
+    if(chipsEl)chipsEl.style.display='none';
+  }
+}
+
 function openRoomModal(){
   if(curPts.length<3)return;
   editRoomIdx=null;pendingPts=[...curPts];
@@ -2278,7 +2327,12 @@ function openRoomModal(){
   const isDach=currentFloor&&currentFloor.dach_config&&currentFloor.dach_config.aktiv;
   const hRow=document.getElementById('m-h-row');
   if(hRow)hRow.style.display=isDach?'none':'';
-  document.getElementById('m-h').value=(window.currentDefaultHeight||2.5).toFixed(2);document.getElementById('m-ok').disabled=false;centerModal('mw-room');setTimeout(()=>document.getElementById('m-name').focus(),50);}
+  document.getElementById('m-h').value=(window.currentDefaultHeight||2.5).toFixed(2);document.getElementById('m-ok').disabled=false;centerModal('mw-room');setTimeout(()=>document.getElementById('m-name').focus(),50);
+  // Clear chips and start OCR in background
+  const chipsEl=document.getElementById('m-ocr-chips');
+  if(chipsEl){chipsEl.innerHTML='<span style="font-size:11px;color:var(--txt3);padding:3px 0">Erkenne Raumnamen …</span>';chipsEl.style.display='flex';}
+  runOCRforRoom();
+}
 function openEditRoom(i){
   editRoomIdx=i;pendingPts=null;
   document.getElementById('room-modal-title').textContent='Raum bearbeiten';
