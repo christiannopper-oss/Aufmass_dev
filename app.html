@@ -2267,13 +2267,35 @@ function centerModal(id){
   mw.style.left=left+'px';
   mw.style.top=top+'px';
 }
+function showOCRKeyInput(el){
+  el.innerHTML='';
+  const span=document.createElement('span');
+  span.style.cssText='font-size:11px;color:var(--txt3)';
+  span.textContent='API-Key: ';
+  const inp=document.createElement('input');
+  inp.placeholder='sk-ant-...';
+  inp.style.cssText='font-size:11px;padding:3px 7px;border:1px solid var(--border2);border-radius:4px;font-family:inherit;background:var(--bg);color:var(--txt);width:170px;outline:none';
+  const btn=document.createElement('button');
+  btn.textContent='OK';
+  btn.style.cssText='font-size:11px;padding:3px 8px;border:1px solid var(--gold);border-radius:4px;background:transparent;color:var(--gold);cursor:pointer;font-family:inherit;margin-left:4px';
+  btn.onclick=()=>{
+    const k=inp.value.trim();
+    if(!k.startsWith('sk-ant-')){alert('Muss mit sk-ant- beginnen');return;}
+    localStorage.setItem('anthropic_api_key',k);
+    runOCRforRoom();
+  };
+  el.appendChild(span);el.appendChild(inp);el.appendChild(btn);
+  el.style.display='flex';
+  setTimeout(()=>inp.focus(),50);
+}
+
 async function runOCRforRoom(){
   const chipsEl=document.getElementById('m-ocr-chips');
   try{
     const key=getApiKey();
     if(!key){
       if(chipsEl){
-        chipsEl.innerHTML='<span style="font-size:11px;color:var(--txt3)">Raumnamen-Erkennung: <a href="#" onclick="document.getElementById(&quot;ki-apikey-overlay&quot;).style.display=&quot;flex&quot;;return false" style="color:var(--gold)">API-Key hinterlegen</a></span>';
+        showOCRKeyInput(chipsEl);
         chipsEl.style.display='flex';
       }
       return;
@@ -3360,7 +3382,9 @@ function saveApiKey(){
   if(!k.startsWith('sk-ant-')){alert('Ungültiger API-Key. Muss mit sk-ant- beginnen.');return;}
   localStorage.setItem('anthropic_api_key',k);
   document.getElementById('ki-apikey-overlay').style.display='none';
-  runKIAnalyse();
+  // Only re-run OCR chips if modal is open, not the full KI analysis
+  const modal=document.getElementById('mw-room');
+  if(modal&&modal.style.display!=='none'){runOCRforRoom();}
 }
 
 function startKIAnalyse(){
@@ -3536,7 +3560,7 @@ Antworte NUR mit JSON, kein Text davor/danach:
       kiResults.ref={pts:[p1,p2],lengthM:r.lengthM,confidence:r.confidence};
       refSec.style.display='';
       document.getElementById('ki-ref-preview').innerHTML=
-        `Maß erkannt: <b>${r.lengthM} m</b> &nbsp;·&nbsp; Konfidenz: <b>${r.confidence}</b><br>
+        `Maß erkannt: <b>${r.lengthM} m</b> &nbsp;·&nbsp; Konfidenz: <b>${r.confidence||'hoch'}</b><br>
          <span style="font-size:10px;opacity:.7">Die Ref-Punkte werden beim Übernehmen direkt gesetzt und kalibriert.</span>`;
     }
 
@@ -3904,7 +3928,7 @@ showOnboarding();
 
 <div id="ki-overlay">
   <div id="ki-modal">
-    <h3>✦ KI-Erkennung <span class="ki-badge">ChatGPT Vision</span></h3>
+    <h3>✦ KI-Erkennung <span class="ki-badge">Claude Vision</span></h3>
     <div class="ki-status" id="ki-status">Analysiere Plan...</div>
     <div id="ki-ref-section" style="display:none">
       <div style="font-size:11px;font-weight:600;color:var(--txt2);margin-bottom:6px;letter-spacing:.5px">REFERENZPUNKT ERKANNT</div>
