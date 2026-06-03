@@ -2273,7 +2273,7 @@ async function runOCRforRoom(){
     const key=getApiKey();
     if(!key){
       if(chipsEl){
-        chipsEl.innerHTML='<span style="font-size:11px;color:var(--txt3)">Raumnamen-Erkennung: <a href="#" onclick="document.getElementById('ki-apikey-overlay').style.display='flex';return false" style="color:var(--gold)">API-Key hinterlegen</a></span>';
+        chipsEl.innerHTML='<span style="font-size:11px;color:var(--txt3)">Raumnamen-Erkennung: <a href="#" onclick="document.getElementById(&quot;ki-apikey-overlay&quot;).style.display=&quot;flex&quot;;return false" style="color:var(--gold)">API-Key hinterlegen</a></span>';
         chipsEl.style.display='flex';
       }
       return;
