@@ -2292,14 +2292,6 @@ function showOCRKeyInput(el){
 async function runOCRforRoom(){
   const chipsEl=document.getElementById('m-ocr-chips');
   try{
-    const key=getApiKey();
-    if(!key){
-      if(chipsEl){
-        showOCRKeyInput(chipsEl);
-        chipsEl.style.display='flex';
-      }
-      return;
-    }
     const activeImg=viewMode==='schnitt'?schnittImg:img;
     if(!activeImg){if(chipsEl)chipsEl.style.display='none';return;}
     // Render plan to small canvas for OCR (600px wide is enough)
@@ -2315,20 +2307,15 @@ async function runOCRforRoom(){
     // Already-used room names to exclude
     const usedNames=rooms.map(r=>r.name.toLowerCase());
 
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+    const ocrPrompt='Dies ist ein Grundrissplan. Erkenne alle Raumnamen/Raumbezeichnungen die im Plan eingetragen sind (z.B. Küche, Bad, Wohnzimmer, Flur, WC, Kammer, Garage usw). Antworte NUR mit einem JSON-Array von Strings, keine Erklärung, keine Markdown-Backticks. Beispiel: ["Küche","Bad","Flur"]. Maximal 12 Namen.';
+    const resp=await fetch(`${SUPABASE_URL}/functions/v1/openai-proxy`,{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
-      body:JSON.stringify({
-        model:'claude-haiku-4-5-20251001',
-        max_tokens:200,
-        messages:[{role:'user',content:[
-          {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
-          {type:'text',text:'Dies ist ein Grundrissplan. Erkenne alle Raumnamen/Raumbezeichnungen die im Plan eingetragen sind (z.B. Küche, Bad, Wohnzimmer, Flur, WC, Kammer, Garage usw). Antworte NUR mit einem JSON-Array von Strings, keine Erklärung, keine Markdown-Backticks. Beispiel: ["Küche","Bad","Flur"]. Maximal 12 Namen.'}
-        ]}]
-      })
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_KEY},
+      body:JSON.stringify({image:'data:image/jpeg;base64,'+b64,prompt:ocrPrompt})
     });
+    if(!resp.ok){if(chipsEl)chipsEl.style.display='none';return;}
     const data=await resp.json();
-    const text=(data.content&&data.content[0]&&data.content[0].text)||'[]';
+    const text=(data.result||data.content||data.choices?.[0]?.message?.content||'[]');
     let names=[];
     try{names=JSON.parse(text.replace(/```json|```/g,'').trim());}catch(e){names=[];}
     // Filter: remove already-used names, keep unique
