@@ -2307,16 +2307,29 @@ async function runOCRforRoom(){
     // Already-used room names to exclude
     const usedNames=rooms.map(r=>r.name.toLowerCase());
 
+    const ocrKey=getApiKey();
+    if(!ocrKey){if(chipsEl)chipsEl.style.display='none';return;}
     const ocrPrompt='Dies ist ein Grundrissplan. Erkenne alle Raumnamen/Raumbezeichnungen die im Plan eingetragen sind (z.B. Küche, Bad, Wohnzimmer, Flur, WC, Kammer, Garage usw). Antworte NUR mit einem JSON-Array von Strings, keine Erklärung, keine Markdown-Backticks. Beispiel: ["Küche","Bad","Flur"]. Maximal 12 Namen.';
-    const resp=await fetch(`${SUPABASE_URL}/functions/v1/openai-proxy`,{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_KEY},
-      body:JSON.stringify({image:'data:image/jpeg;base64,'+b64,prompt:ocrPrompt})
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':ocrKey,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({
+        model:'claude-haiku-4-5-20251001',
+        max_tokens:300,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
+          {type:'text',text:ocrPrompt}
+        ]}]
+      })
     });
     if(!resp.ok){if(chipsEl)chipsEl.style.display='none';return;}
     const data=await resp.json();
-    console.log('[OCR] proxy response:', JSON.stringify(data).slice(0,200));
-    const text=(data.text||data.result||data.content||data.choices?.[0]?.message?.content||'[]');
+    const text=(data.content&&data.content[0]&&data.content[0].text)||'[]';
     let names=[];
     try{names=JSON.parse(text.replace(/```json|```/g,'').trim());}catch(e){names=[];}
     // Filter: remove already-used names, keep unique
