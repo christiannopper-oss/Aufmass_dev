@@ -33,8 +33,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);heig
 .btn-new{padding:10px 20px;background:var(--gold);border:none;border-radius:var(--radius);color:#fff;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.2px;text-shadow:0 1px 2px rgba(0,0,0,.18);transition:background .15s;min-height:44px}
 .btn-new:hover{background:var(--gold-lt)}
 #project-list{flex:1;overflow-y:auto;padding:24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;align-content:start}
-.project-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;cursor:pointer;transition:box-shadow .15s,border-color .15s,transform .1s;display:flex;flex-direction:column;gap:6px}
-.project-card:hover{border-color:var(--gold-lt);box-shadow:var(--shadow);transform:translateY(-1px)}
+.project-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;cursor:pointer;transition:box-shadow .15s,border-color .15s,transform .1s;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 12px rgba(0,0,0,.05)}
+.project-card:hover{border-color:var(--gold-lt);box-shadow:0 4px 20px rgba(0,0,0,.12),0 1px 4px rgba(0,0,0,.08);transform:translateY(-2px)}
 .project-card-name{font-weight:700;font-size:15px;color:var(--txt)}
 .project-card-client{font-size:13px;color:var(--txt2)}
 .project-card-dates{font-size:11px;color:var(--txt3);margin-top:4px;font-family:'DM Mono',monospace;line-height:1.8}
@@ -48,7 +48,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);heig
 .back-btn:hover{color:var(--nav-txt);border-color:#3A5570;background:rgba(255,255,255,0.08)}
 .floor-project-name{font-weight:600;font-size:15px;color:var(--nav-txt);flex:1}
 #floor-list{flex:1;overflow-y:auto;padding:20px;min-height:0;padding-bottom:80px}
-.floor-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:border-color .15s,box-shadow .15s;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+.floor-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all .15s;box-shadow:0 1px 4px rgba(0,0,0,.07),0 3px 10px rgba(0,0,0,.05)}
 .floor-card:hover{border-color:var(--gold-lt);box-shadow:var(--shadow)}
 .floor-card-name{font-weight:600;font-size:14px;color:var(--txt)}
 .floor-card-meta{font-size:12px;color:var(--txt2);margin-top:4px}
@@ -59,7 +59,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);heig
 
 /* ── App Screen ── */
 #app-screen{display:none;flex-direction:column;height:100dvh}
-#toolbar{background:var(--toolbar-bg);border-bottom:1px solid var(--toolbar-border);flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,.05);position:sticky;top:0;z-index:10;-webkit-transform:translateZ(0);transform:translateZ(0)}
+#toolbar{background:var(--toolbar-bg);border-bottom:1px solid var(--toolbar-border);flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.2);position:sticky;top:0;z-index:10;-webkit-transform:translateZ(0);transform:translateZ(0)}
 .tb-row{display:flex;align-items:center;gap:6px;padding:6px 16px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}.tb-row::-webkit-scrollbar{display:none}
 #tb-brand{min-height:44px;background:var(--nav-bg);border-bottom:1px solid var(--nav-border)}
 #tb-nav{min-height:42px;background:var(--tb-bg);border-bottom:1px solid var(--tb-border);padding:5px 16px}
@@ -71,8 +71,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);heig
 .tb-group{display:flex;align-items:center;gap:3px}
 .tb-label{font-size:11px;color:#4A6278;letter-spacing:.4px;font-weight:600;white-space:nowrap;padding:0 4px;font-family:'DM Sans',sans-serif;text-transform:uppercase}
 
-.tbtn{padding:8px 14px;border:1px solid #2E3E50;border-radius:var(--radius);background:transparent;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#8AAAC0;white-space:nowrap;transition:all .12s;line-height:1.4;min-height:40px}
-.tbtn:hover:not(.active):not(:disabled){background:#2E3E50;border-color:#3A5068;color:#C8D8E4}
+.tbtn{padding:8px 14px;border:1px solid #3A5068;border-radius:var(--radius);background:rgba(255,255,255,0.06);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#B8D0E4;white-space:nowrap;transition:all .12s;line-height:1.4;min-height:40px}
+.tbtn:hover:not(.active):not(:disabled){background:rgba(255,255,255,0.12);border-color:#4A6880;color:#DDE8F0}
 .tbtn.active{background:rgba(42,90,140,0.25);border-color:#2A5A8C;color:#7EC4E4;font-weight:600}
 .tbtn.danger{border-color:rgba(192,57,43,.35);color:var(--red)}
 .tbtn.danger:hover:not(:disabled){background:rgba(192,57,43,.07)}
@@ -100,7 +100,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 #mag-cross::after{content:'';position:absolute;height:1px;width:100%;top:calc(50% - .5px);left:0;background:rgba(200,169,110,.7)}
 
 /* ── Sidebar ── */
-#sidebar{width:260px;border-left:1px solid var(--sidebar-border);display:flex;flex-direction:column;overflow:hidden;background:var(--sidebar-bg)}
+#sidebar{width:260px;border-left:1px solid var(--sidebar-border);display:flex;flex-direction:column;overflow:hidden;background:var(--sidebar-bg);box-shadow:-2px 0 12px rgba(0,0,0,.06)}
 #sb-raeume-body{flex:1;overflow-y:auto;min-height:0;display:flex;flex-direction:column}
 .sh{padding:11px 14px;border-bottom:1px solid var(--sidebar-border);font-size:10px;color:var(--txt3);letter-spacing:.8px;font-weight:700;flex-shrink:0;background:var(--sidebar-bg);font-family:'DM Mono',monospace;text-transform:uppercase}
 #rlist{padding:8px}
@@ -137,7 +137,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 
 /* ── Modals ── */
 .mwrap{position:absolute;z-index:200;user-select:none;min-width:300px}
-.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-lg)}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.24),0 2px 8px rgba(0,0,0,.12)}
 .mdrag{padding:11px 14px;cursor:grab;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:#f7f4ef}
 .mdrag:active{cursor:grabbing}
 .mtitle{font-size:13px;font-weight:600;color:var(--txt)}
@@ -206,7 +206,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
         <path d="M13 46 L13 22 L30 38 L47 22 L47 46" stroke="#1a1a1a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
         <path d="M30 38 L30 14 M25 19 L30 14 L35 19" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <span style="letter-spacing:-0.5px"><span style="font-weight:700;color:var(--txt)">meas</span><span style="font-weight:300;color:var(--gold)">up</span></span>
+      <span style="letter-spacing:-0.5px"><span style="font-weight:700;color:#E8DCC8">meas</span><span style="font-weight:300;color:var(--gold)">up</span></span>
       <small>Aufmaß &amp; Flächenberechnung</small>
     </span>
     <div style="display:flex;align-items:center;gap:10px;margin-left:auto">
@@ -257,7 +257,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
           <path d="M13 46 L13 22 L30 38 L47 22 L47 46" stroke="#1a1a1a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
           <path d="M30 38 L30 14 M25 19 L30 14 L35 19" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span style="letter-spacing:-0.5px"><span style="font-weight:700;color:var(--txt)">meas</span><span style="font-weight:300;color:var(--gold)">up</span></span>
+        <span style="letter-spacing:-0.5px"><span style="font-weight:700;color:#E8DCC8">meas</span><span style="font-weight:300;color:var(--gold)">up</span></span>
       </span>
       <div class="spacer"></div>
       <span class="floor-label" id="current-floor-label"></span>
@@ -269,7 +269,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
       <div class="tb-sep"></div>
       <button class="tbtn primary" onclick="document.getElementById('fi').click()">↑ Plan laden</button>
       <input id="fi" type="file" accept="application/pdf,image/*" style="display:none" onchange="loadFile(this)">
-      <select id="plan-reuse-wrap" onchange="if(this.value){window.reuseFloorPlan(this.value);this.value=''}" style="display:none;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--txt2);background:var(--bg2);cursor:pointer;min-height:40px;height:40px">
+      <select id="plan-reuse-wrap" onchange="if(this.value){window.reuseFloorPlan(this.value);this.value=''}" style="display:none;padding:8px 12px;border:1px solid #3A5068;border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#B8D0E4;background:rgba(255,255,255,0.06);cursor:pointer;min-height:40px;height:40px">
         <option value="">↩ Plan übernehmen …</option>
       </select>
       <button class="tbtn" id="btn-rotate" onclick="rotatePlan()">↻ Drehen</button>
