@@ -1323,8 +1323,10 @@ function renderMag(wx,wy){
 }
 
 // ── DRAGGABLE MODALS ───────────────────────────────────────
-function mkDrag(hId,wId){const h=document.getElementById(hId),w=document.getElementById(wId);let dn=false,mx=0,my=0;h.addEventListener('mousedown',e=>{dn=true;mx=e.clientX;my=e.clientY;e.preventDefault();});document.addEventListener('mousemove',e=>{if(!dn)return;let nx=parseFloat(w.style.left||0)+(e.clientX-mx),ny=parseFloat(w.style.top||0)+(e.clientY-my);nx=Math.max(0,Math.min(window.innerWidth-w.offsetWidth,nx));ny=Math.max(0,Math.min(window.innerHeight-w.offsetHeight,ny));w.style.left=nx+'px';w.style.top=ny+'px';mx=e.clientX;my=e.clientY;});document.addEventListener('mouseup',()=>dn=false);}
-['room','ref','entry','export'].forEach(id=>mkDrag('md-'+id,'mw-'+id));
+function mkDrag(hId,wId){const h=document.getElementById(hId),w=document.getElementById(wId);if(!h||!w)return;let dn=false,mx=0,my=0;h.addEventListener('mousedown',e=>{dn=true;mx=e.clientX;my=e.clientY;e.preventDefault();});document.addEventListener('mousemove',e=>{if(!dn)return;let nx=parseFloat(w.style.left||0)+(e.clientX-mx),ny=parseFloat(w.style.top||0)+(e.clientY-my);nx=Math.max(0,Math.min(window.innerWidth-w.offsetWidth,nx));ny=Math.max(0,Math.min(window.innerHeight-w.offsetHeight,ny));w.style.left=nx+'px';w.style.top=ny+'px';mx=e.clientX;my=e.clientY;});document.addEventListener('mouseup',()=>dn=false);}
+['room','ref','entry'].forEach(id=>mkDrag('md-'+id,'mw-'+id));
+// Export modal is appended to body – init drag after DOM ready
+document.addEventListener('DOMContentLoaded',()=>mkDrag('md-export','mw-export'));
 
 function resize(){
   const r=wrap.getBoundingClientRect();
