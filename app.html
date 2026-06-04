@@ -613,12 +613,9 @@ function showScreen(name){
   if(name==='project'){
     const s=document.getElementById('proj-search');
     if(s)s.value='';
-    // Zeige User-E-Mail
     const emailEl=document.getElementById('user-email-display');
-    if(emailEl){
-      const u=auth.getUser();
-      emailEl.textContent=u.email||'';
-    }
+    if(emailEl){const u=auth.getUser();emailEl.textContent=u.email||'';}
+    // loadProjects wird separat aufgerufen um parallele 401-Refreshes zu vermeiden
     loadProjects();
   }
   if(name==='floor')loadFloors();
@@ -3779,12 +3776,11 @@ function obRender(){
   if(skip)skip.style.visibility=obCurrentStep===4?'hidden':'visible';
 }
 // ── INIT ─────────────────────────────────────────────────
-showScreen('project');
 showOnboarding();
-// Sicherstellen dass Projekte nach Token-Refresh geladen sind
+// Token erst refreshen, dann Screen anzeigen – verhindert parallele 401-Requests
 (async()=>{
-  const ok=await auth.refresh().catch(()=>false);
-  loadProjects();
+  await auth.refresh().catch(()=>{});
+  showScreen('project');
 })();
 </script>
 <!-- JSON Import Modal -->
