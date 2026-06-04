@@ -393,8 +393,8 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 
       <!-- export modal -->
       <div class="mwrap" id="mw-export" style="display:none;left:40px;top:20px">
-        <div class="modal" style="min-width:300px;width:min(480px,92vw);height:min(82dvh,640px);max-height:min(82dvh,640px);display:flex;flex-direction:column"><div class="mdrag" id="md-export"><span class="mtitle">PDF Export</span><span style="font-size:9px;color:var(--txt3)">ZIEHEN</span></div>
-        <div class="mbody" style="overflow-y:auto;flex:1">
+        <div class="modal" style="min-width:300px;width:min(480px,92vw);display:flex;flex-direction:column"><div class="mdrag" id="md-export"><span class="mtitle">PDF Export</span><span style="font-size:9px;color:var(--txt3)">ZIEHEN</span></div>
+        <div class="mbody" style="overflow-y:auto;flex:1;max-height:calc(min(82dvh,680px) - 110px)">
           <label>PROJEKTBEZEICHNUNG</label><input id="exp-project" placeholder="z.B. EFH Musterstraße 1">
           <div class="row2">
             <div><label>AUFTRAGGEBER</label><input id="exp-client" placeholder="optional"></div>
@@ -904,13 +904,11 @@ async function deleteFloor(id){
 
 async function exportProject(){
   if(!currentProject||!floors.length)return;
-  // Load all rooms for all floors
-  const allFloorRooms=[];
-  for(const fl of floors){
-    const fRooms=await sb.get('rooms','?floor_id=eq.'+fl.id+'&order=created_at.asc')||[];
-    allFloorRooms.push({floor:fl,rooms:fRooms});
-  }
-  generateProjectPDF(currentProject,allFloorRooms);
+  // Pre-fill modal with project data and open it
+  document.getElementById('exp-project').value=currentProject.name||'';
+  document.getElementById('exp-client').value=currentProject.client||'';
+  document.getElementById('exp-author').value=currentProject.author||'';
+  openExportModal();
 }
 
 function generateProjectPDF(project,allFloorRooms){
