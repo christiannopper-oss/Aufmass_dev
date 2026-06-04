@@ -163,7 +163,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 .overlay-modal label{display:block;font-size:12px;color:var(--txt2);letter-spacing:.6px;font-weight:600;margin-bottom:6px;font-family:'DM Mono',monospace;text-transform:uppercase}
 .overlay-modal input{width:100%;padding:12px 13px;border:1px solid var(--border);border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--txt);background:var(--bg);margin-bottom:14px;outline:none;transition:border-color .15s}
 .overlay-modal input:focus{border-color:var(--gold)}
-.exp-check-row{display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;color:var(--txt2);transition:background .1s;min-height:36px}
+.exp-check-row{display:flex;align-items:center;gap:16px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;color:var(--txt2);transition:background .1s;min-height:36px}
 .exp-check-row:hover{background:var(--bg3)}
 .exp-check-row input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px;margin:0;flex-shrink:0;cursor:pointer}
 .exp-check-row span{flex:1}
@@ -391,34 +391,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
         </div></div>
       </div>
 
-      <!-- export modal -->
-      <div class="mwrap" id="mw-export" style="display:none;left:40px;top:20px">
-        <div class="modal" style="min-width:300px;width:min(480px,92vw);display:flex;flex-direction:column"><div class="mdrag" id="md-export"><span class="mtitle">PDF Export</span><span style="font-size:9px;color:var(--txt3)">ZIEHEN</span></div>
-        <div class="mbody" style="overflow-y:auto;flex:1;max-height:min(60vh,480px)">
-          <label>PROJEKTBEZEICHNUNG</label><input id="exp-project" placeholder="z.B. EFH Musterstraße 1">
-          <div class="row2">
-            <div><label>AUFTRAGGEBER</label><input id="exp-client" placeholder="optional"></div>
-            <div><label>ERSTELLT VON</label><input id="exp-author" placeholder="optional"></div>
-          </div>
-          <label style="margin-bottom:8px">AUSGABE-WERTE</label>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:14px">
-            <label class="exp-check-row"><input type="checkbox" id="exp-grundflaeche" checked><span>Grundfläche</span></label>
-            <label class="exp-check-row"><input type="checkbox" id="exp-decke" checked><span>Deckenfläche</span></label>
-            <label class="exp-check-row"><input type="checkbox" id="exp-wand-brutto" checked><span>Wand brutto</span></label>
-            <label class="exp-check-row"><input type="checkbox" id="exp-wand-netto" checked><span>Wand netto</span></label>
-            <label class="exp-check-row"><input type="checkbox" id="exp-abzuege" checked><span>Abzüge / Zusätze</span></label>
-            <label class="exp-check-row"><input type="checkbox" id="exp-raumhoehe" checked><span>Raumhöhe</span></label>
-            <label class="exp-check-row"><input type="checkbox" id="exp-sockel" checked><span>Sockelleisten</span></label>
-            <label class="exp-check-row"><input type="checkbox" id="exp-acryl" checked><span>Acryl (lfd. Meter)</span></label>
-            <label class="exp-check-row"><input type="checkbox" id="exp-dach"><span>Dach-Detailwerte</span></label>
-          </div>
-          <label class="exp-check-row" style="margin-bottom:14px"><input type="checkbox" id="exp-grundriss" checked><span>📐 Grundriss-Übersicht im PDF</span></label>
-        </div><div class="mbtns" style="padding:12px 14px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg2)">
-            <button class="bcl" onclick="closeExport(false)">Abbrechen</button>
-            <button class="bok bok-green" onclick="closeExport(true)">↓ PDF erstellen</button>
-          </div
-        </div></div>
-      </div>
+
     </div>
 
     <div id="sidebar">
@@ -3942,5 +3915,34 @@ showOnboarding();
     </div>
   </div>
 </div>
+
+<!-- export modal -->
+      <div class="mwrap" id="mw-export" style="display:none;left:40px;top:20px">
+        <div class="modal" style="min-width:300px;width:min(480px,92vw);display:flex;flex-direction:column"><div class="mdrag" id="md-export"><span class="mtitle">PDF Export</span><span style="font-size:9px;color:var(--txt3)">ZIEHEN</span></div>
+        <div class="mbody" style="overflow-y:auto;flex:1;max-height:min(60vh,480px)">
+          <label>PROJEKTBEZEICHNUNG</label><input id="exp-project" placeholder="z.B. EFH Musterstraße 1">
+          <div class="row2">
+            <div><label>AUFTRAGGEBER</label><input id="exp-client" placeholder="optional"></div>
+            <div><label>ERSTELLT VON</label><input id="exp-author" placeholder="optional"></div>
+          </div>
+          <label style="margin-bottom:8px">AUSGABE-WERTE</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:14px">
+            <label class="exp-check-row"><input type="checkbox" id="exp-grundflaeche" checked><span>Grundfläche</span></label>
+            <label class="exp-check-row"><input type="checkbox" id="exp-decke" checked><span>Deckenfläche</span></label>
+            <label class="exp-check-row"><input type="checkbox" id="exp-wand-brutto" checked><span>Wand brutto</span></label>
+            <label class="exp-check-row"><input type="checkbox" id="exp-wand-netto" checked><span>Wand netto</span></label>
+            <label class="exp-check-row"><input type="checkbox" id="exp-abzuege" checked><span>Abzüge / Zusätze</span></label>
+            <label class="exp-check-row"><input type="checkbox" id="exp-raumhoehe" checked><span>Raumhöhe</span></label>
+            <label class="exp-check-row"><input type="checkbox" id="exp-sockel" checked><span>Sockelleisten</span></label>
+            <label class="exp-check-row"><input type="checkbox" id="exp-acryl" checked><span>Acryl (lfd. Meter)</span></label>
+            <label class="exp-check-row"><input type="checkbox" id="exp-dach"><span>Dach-Detailwerte</span></label>
+          </div>
+          <label class="exp-check-row" style="margin-bottom:14px"><input type="checkbox" id="exp-grundriss" checked><span>📐 Grundriss-Übersicht im PDF</span></label>
+        </div><div class="mbtns" style="padding:12px 14px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg2)">
+            <button class="bcl" onclick="closeExport(false)">Abbrechen</button>
+            <button class="bok bok-green" onclick="closeExport(true)">↓ PDF erstellen</button>
+          </div
+        </div></div>
+      </div>
 </body>
 </html>
