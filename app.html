@@ -136,7 +136,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 .dt{font-size:15px;color:var(--txt2);font-weight:500}
 
 /* ── Modals ── */
-.mwrap{position:absolute;z-index:200;user-select:none;min-width:300px}
+.mwrap{position:fixed;z-index:600;user-select:none;min-width:300px}
 .modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.24),0 2px 8px rgba(0,0,0,.12)}
 .mdrag{padding:11px 14px;cursor:grab;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:#f7f4ef}
 .mdrag:active{cursor:grabbing}
@@ -163,7 +163,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 .overlay-modal label{display:block;font-size:12px;color:var(--txt2);letter-spacing:.6px;font-weight:600;margin-bottom:6px;font-family:'DM Mono',monospace;text-transform:uppercase}
 .overlay-modal input{width:100%;padding:12px 13px;border:1px solid var(--border);border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--txt);background:var(--bg);margin-bottom:14px;outline:none;transition:border-color .15s}
 .overlay-modal input:focus{border-color:var(--gold)}
-.exp-check-row{display:flex;align-items:center;gap:12px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:13px;color:var(--txt2);transition:background .1s;min-height:42px}
+.exp-check-row{display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;color:var(--txt2);transition:background .1s;min-height:36px}
 .exp-check-row:hover{background:var(--bg3)}
 .exp-check-row input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px;margin:0;flex-shrink:0;cursor:pointer}
 .exp-check-row span{flex:1}
@@ -394,7 +394,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
       <!-- export modal -->
       <div class="mwrap" id="mw-export" style="display:none;left:40px;top:20px">
         <div class="modal" style="min-width:300px;width:min(480px,92vw);display:flex;flex-direction:column"><div class="mdrag" id="md-export"><span class="mtitle">PDF Export</span><span style="font-size:9px;color:var(--txt3)">ZIEHEN</span></div>
-        <div class="mbody" style="overflow-y:auto;flex:1;max-height:calc(min(82dvh,680px) - 110px)">
+        <div class="mbody" style="overflow-y:auto;flex:1;max-height:min(60vh,480px)">
           <label>PROJEKTBEZEICHNUNG</label><input id="exp-project" placeholder="z.B. EFH Musterstraße 1">
           <div class="row2">
             <div><label>AUFTRAGGEBER</label><input id="exp-client" placeholder="optional"></div>
@@ -904,11 +904,19 @@ async function deleteFloor(id){
 
 async function exportProject(){
   if(!currentProject||!floors.length)return;
-  // Pre-fill modal with project data and open it
   document.getElementById('exp-project').value=currentProject.name||'';
   document.getElementById('exp-client').value=currentProject.client||'';
   document.getElementById('exp-author').value=currentProject.author||'';
-  openExportModal();
+  // Open modal – position relative to window since cwrap may not be visible
+  const mw=document.getElementById('mw-export');
+  mw.style.display='block';
+  requestAnimationFrame(()=>{
+    const sw=window.innerWidth,sh=window.innerHeight;
+    const mh=mw.offsetHeight,mw2=mw.offsetWidth;
+    mw.style.left=Math.max(8,Math.round(sw/2-mw2/2))+'px';
+    mw.style.top=Math.max(60,Math.round((sh-mh)/2))+'px';
+    setTimeout(()=>document.getElementById('exp-project').focus(),50);
+  });
 }
 
 function generateProjectPDF(project,allFloorRooms){
@@ -1342,7 +1350,7 @@ function renderMag(wx,wy){
 }
 
 // ── DRAGGABLE MODALS ───────────────────────────────────────
-function mkDrag(hId,wId){const h=document.getElementById(hId),w=document.getElementById(wId);let dn=false,mx=0,my=0;h.addEventListener('mousedown',e=>{dn=true;mx=e.clientX;my=e.clientY;e.preventDefault();});document.addEventListener('mousemove',e=>{if(!dn)return;const wr=wrap.getBoundingClientRect();let nx=parseFloat(w.style.left||0)+(e.clientX-mx),ny=parseFloat(w.style.top||0)+(e.clientY-my);nx=Math.max(0,Math.min(wr.width-w.offsetWidth,nx));ny=Math.max(0,Math.min(wr.height-w.offsetHeight,ny));w.style.left=nx+'px';w.style.top=ny+'px';mx=e.clientX;my=e.clientY;});document.addEventListener('mouseup',()=>dn=false);}
+function mkDrag(hId,wId){const h=document.getElementById(hId),w=document.getElementById(wId);let dn=false,mx=0,my=0;h.addEventListener('mousedown',e=>{dn=true;mx=e.clientX;my=e.clientY;e.preventDefault();});document.addEventListener('mousemove',e=>{if(!dn)return;let nx=parseFloat(w.style.left||0)+(e.clientX-mx),ny=parseFloat(w.style.top||0)+(e.clientY-my);nx=Math.max(0,Math.min(window.innerWidth-w.offsetWidth,nx));ny=Math.max(0,Math.min(window.innerHeight-w.offsetHeight,ny));w.style.left=nx+'px';w.style.top=ny+'px';mx=e.clientX;my=e.clientY;});document.addEventListener('mouseup',()=>dn=false);}
 ['room','ref','entry','export'].forEach(id=>mkDrag('md-'+id,'mw-'+id));
 
 function resize(){
@@ -2256,16 +2264,13 @@ function confirmRef(){
 }
 
 function centerModal(id){
-  const wr=wrap.getBoundingClientRect();
   const mw=document.getElementById(id);
   mw.style.display='block';
   requestAnimationFrame(()=>{
-    const mh=Math.min(mw.offsetHeight,wr.height*0.85);
-    const mw2=mw.offsetWidth||340;
-    const left=Math.max(10,Math.min(wr.width-mw2-10,wr.width/2-mw2/2));
-    const top=Math.max(8,Math.min(wr.height-mh-8,wr.height/2-mh/2));
-    mw.style.left=left+'px';
-    mw.style.top=top+'px';
+    const sw=window.innerWidth, sh=window.innerHeight;
+    const mh=mw.offsetHeight, mw2=mw.offsetWidth||340;
+    mw.style.left=Math.max(8,Math.round(sw/2-mw2/2))+'px';
+    mw.style.top=Math.max(60,Math.round((sh-mh)/2))+'px';
   });
 }
 
@@ -2350,13 +2355,10 @@ function openExportModal(){
   const mw=document.getElementById('mw-export');
   mw.style.display='block';
   requestAnimationFrame(()=>{
-    const wr=document.getElementById('cwrap').getBoundingClientRect();
-    const mh=mw.offsetHeight;
-    const mw2=mw.offsetWidth;
-    const left=Math.max(8,Math.round(wr.width/2-mw2/2));
-    const top=Math.max(8,Math.round((wr.height-mh)/2));
-    mw.style.left=left+'px';
-    mw.style.top=Math.max(8,top)+'px';
+    const sw=window.innerWidth, sh=window.innerHeight;
+    const mh=mw.offsetHeight, mw2=mw.offsetWidth;
+    mw.style.left=Math.max(8,Math.round(sw/2-mw2/2))+'px';
+    mw.style.top=Math.max(60,Math.round((sh-mh)/2))+'px';
     setTimeout(()=>document.getElementById('exp-project').focus(),50);
   });
 }
