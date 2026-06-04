@@ -3779,6 +3779,11 @@ function obRender(){
 // ── INIT ─────────────────────────────────────────────────
 showScreen('project');
 showOnboarding();
+// Sicherstellen dass Projekte nach Token-Refresh geladen sind
+(async()=>{
+  const ok=await auth.refresh().catch(()=>false);
+  loadProjects();
+})();
 </script>
 <!-- JSON Import Modal -->
 <div id="json-import-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:600;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)">
