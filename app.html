@@ -629,7 +629,8 @@ async function loadProjects(){
   try{
     const token=auth.getToken();
     if(list)list.innerHTML+='<div style="font-size:10px;color:#888;padding:4px 24px">token: '+(token?token.slice(0,12)+'…':'KEIN TOKEN')+'</div>';
-    projects=await sb.get('projects','?order=created_at.desc')||[];
+    const _uid=auth.getUserId();
+    projects=await sb.get('projects','?user_id=eq.'+_uid+'&order=created_at.desc')||[];
     if(list)list.innerHTML+='<div style="font-size:10px;color:#888;padding:4px 24px">projekte geladen: '+projects.length+'</div>';
     renderProjects();
   }catch(e){
