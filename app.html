@@ -3748,7 +3748,7 @@ function closeOnboarding(){
 }
 
 function obNext(){
-  if(obCurrentStep<4){
+  if(obCurrentStep<5){
     obCurrentStep++;
     obRender();
   } else {
@@ -3757,28 +3757,16 @@ function obNext(){
 }
 
 function obRender(){
-  // Steps
-  for(let i=1;i<=4;i++){
-    const s=document.getElementById('ob-s'+i);
-    if(s)s.style.display=i===obCurrentStep?'':'none';
-  }
-  // Dots
-  for(let i=1;i<=4;i++){
-    const d=document.getElementById('ob-d'+i);
-    if(d)d.style.background=i===obCurrentStep?'#b8842a':'#3a3a3a';
-  }
-  // Progress bar
+  for(let i=1;i<=5;i++){const s=document.getElementById('ob-s'+i);if(s)s.style.display=i===obCurrentStep?'':'none';}
+  for(let i=1;i<=5;i++){const d=document.getElementById('ob-d'+i);if(d){d.style.background=i===obCurrentStep?'#C8880A':'rgba(255,255,255,0.18)';d.style.transform=i===obCurrentStep?'scale(1.3)':'scale(1)';}}
   const prog=document.getElementById('ob-progress');
-  if(prog)prog.style.width=(obCurrentStep/4*100)+'%';
-  // Step indicator
+  if(prog)prog.style.width=(obCurrentStep/5*100)+'%';
   const ind=document.getElementById('ob-step-indicator');
-  if(ind)ind.textContent='SCHRITT '+obCurrentStep+' VON 4';
-  // Button text
+  if(ind)ind.textContent='SCHRITT '+obCurrentStep+' VON 5';
   const btn=document.getElementById('ob-next');
-  if(btn)btn.textContent=obCurrentStep===4?'Los geht\'s ✓':'Weiter →';
-  // Skip text
+  if(btn)btn.textContent=obCurrentStep===5?'Los geht\'s ✓':'Weiter →';
   const skip=document.getElementById('ob-skip');
-  if(skip)skip.style.visibility=obCurrentStep===4?'hidden':'visible';
+  if(skip)skip.style.visibility=obCurrentStep===5?'hidden':'visible';
 }
 // ── INIT ─────────────────────────────────────────────────
 showOnboarding();
@@ -3861,64 +3849,166 @@ showOnboarding();
 </div>
 
 <!-- ── ONBOARDING WIZARD ────────────────────────────────── -->
-<div id="onboarding-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;padding:20px">
-  <div style="background:#1e1b14;border:1px solid #3a3a3a;border-radius:18px;max-width:480px;width:100%;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,.6)">
+<div id="onboarding-overlay" style="display:none;position:fixed;inset:0;background:rgba(10,16,26,.88);backdrop-filter:blur(6px);z-index:1000;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#1C2B3A;border:1px solid #2A3D52;border-radius:20px;max-width:520px;width:100%;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,.7)">
     <!-- Progress bar -->
-    <div style="height:3px;background:#2e2e2e">
-      <div id="ob-progress" style="height:100%;background:#b8842a;transition:width .3s;width:25%"></div>
+    <div style="height:3px;background:#152130">
+      <div id="ob-progress" style="height:100%;background:#C8880A;transition:width .4s ease;width:20%"></div>
     </div>
     <!-- Content -->
-    <div style="padding:36px 32px 28px">
-      <div id="ob-step-indicator" style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#6a6660;font-family:'DM Mono',monospace;margin-bottom:20px">SCHRITT 1 VON 4</div>
-      <!-- Step 1 -->
+    <div style="padding:32px 32px 20px">
+      <div id="ob-step-indicator" style="font-size:10px;font-weight:700;letter-spacing:2px;color:#4A6278;font-family:'DM Mono',monospace;margin-bottom:22px">SCHRITT 1 VON 5</div>
+
+      <!-- Step 1: Projekt anlegen -->
       <div class="ob-step" id="ob-s1">
-        <div style="font-size:40px;margin-bottom:16px">📁</div>
-        <h2 style="font-size:22px;font-weight:800;color:#f0ede7;letter-spacing:-.5px;margin-bottom:10px">Projekt anlegen</h2>
-        <p style="font-size:15px;color:#b8b4ac;line-height:1.7">Lege zuerst ein Projekt an — z.B. der Name des Kunden oder die Adresse. Innerhalb eines Projekts kannst du mehrere Geschosse erfassen.</p>
-        <div style="margin-top:20px;background:#252018;border-radius:10px;padding:14px 16px;font-size:13px;color:#6a6660;line-height:1.7">
-          💡 <strong style="color:#b8b4ac">Tipp:</strong> Lege für jeden Auftrag ein eigenes Projekt an. So bleiben deine Aufmaße sauber getrennt.
+        <div style="margin-bottom:20px;background:#152130;border-radius:12px;padding:20px;display:flex;align-items:center;justify-content:center">
+          <svg width="220" height="110" viewBox="0 0 220 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="20" y="20" width="80" height="70" rx="8" fill="#1F3148" stroke="#2A4A68" stroke-width="1.5"/>
+            <rect x="28" y="34" width="64" height="7" rx="3" fill="#C8880A" opacity=".7"/>
+            <rect x="28" y="47" width="44" height="5" rx="2.5" fill="#3A5570" opacity=".8"/>
+            <rect x="28" y="58" width="52" height="5" rx="2.5" fill="#3A5570" opacity=".5"/>
+            <rect x="28" y="69" width="36" height="5" rx="2.5" fill="#3A5570" opacity=".4"/>
+            <rect x="28" y="22" width="20" height="8" rx="3" fill="#C8880A"/>
+            <rect x="120" y="20" width="80" height="70" rx="8" fill="#1F3148" stroke="#C8880A" stroke-width="1.5"/>
+            <rect x="128" y="34" width="64" height="7" rx="3" fill="#C8880A"/>
+            <rect x="128" y="47" width="44" height="5" rx="2.5" fill="#4A6A8A" opacity=".9"/>
+            <rect x="128" y="58" width="52" height="5" rx="2.5" fill="#4A6A8A" opacity=".6"/>
+            <rect x="128" y="69" width="36" height="5" rx="2.5" fill="#4A6A8A" opacity=".4"/>
+            <circle cx="170" cy="85" r="12" fill="#C8880A"/>
+            <text x="170" y="90" text-anchor="middle" fill="white" font-size="14" font-weight="700">+</text>
+            <rect x="128" y="22" width="20" height="8" rx="3" fill="#C8880A"/>
+          </svg>
+        </div>
+        <h2 style="font-size:20px;font-weight:800;color:#E8DCC8;letter-spacing:-.3px;margin-bottom:8px">Projekt anlegen</h2>
+        <p style="font-size:14px;color:#7A92A8;line-height:1.7;margin-bottom:14px">Lege zuerst ein Projekt an — z.B. der Kundenname oder die Adresse. Innerhalb eines Projekts erfasst du beliebig viele Geschosse.</p>
+        <div style="background:#152130;border-left:3px solid #C8880A;border-radius:0 8px 8px 0;padding:10px 14px;font-size:12px;color:#5A7888;line-height:1.6">
+          <strong style="color:#A8C0D0">Tipp:</strong> Ein Projekt pro Auftrag — so bleiben alle Aufmaße sauber getrennt.
         </div>
       </div>
-      <!-- Step 2 -->
+
+      <!-- Step 2: Plan laden -->
       <div class="ob-step" id="ob-s2" style="display:none">
-        <div style="font-size:40px;margin-bottom:16px">📐</div>
-        <h2 style="font-size:22px;font-weight:800;color:#f0ede7;letter-spacing:-.5px;margin-bottom:10px">Plan laden & Maßstab setzen</h2>
-        <p style="font-size:15px;color:#b8b4ac;line-height:1.7">Lade den Grundriss als PDF oder Foto. Dann setzt du zwei Punkte auf eine bekannte Strecke — measup berechnet daraus den Maßstab automatisch.</p>
-        <div style="margin-top:20px;background:#252018;border-radius:10px;padding:14px 16px;font-size:13px;color:#6a6660;line-height:1.7">
-          💡 <strong style="color:#b8b4ac">Tipp:</strong> Ideal ist eine Wand oder Tür deren Maß du kennst. Je länger die Referenzstrecke, desto genauer das Ergebnis.
+        <div style="margin-bottom:20px;background:#152130;border-radius:12px;padding:20px;display:flex;align-items:center;justify-content:center">
+          <svg width="220" height="110" viewBox="0 0 220 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="30" y="10" width="160" height="90" rx="6" fill="#1F3148" stroke="#2A4A68" stroke-width="1.5"/>
+            <!-- Floor plan lines -->
+            <rect x="45" y="25" width="55" height="40" rx="2" fill="none" stroke="#4A6A8A" stroke-width="1.2"/>
+            <rect x="105" y="25" width="70" height="25" rx="2" fill="none" stroke="#4A6A8A" stroke-width="1.2"/>
+            <rect x="105" y="55" width="35" height="20" rx="2" fill="none" stroke="#4A6A8A" stroke-width="1.2"/>
+            <rect x="143" y="55" width="32" height="20" rx="2" fill="none" stroke="#4A6A8A" stroke-width="1.2"/>
+            <!-- Scale line -->
+            <line x1="50" y1="78" x2="110" y2="78" stroke="#C8880A" stroke-width="2" stroke-dasharray="4,3"/>
+            <circle cx="50" cy="78" r="3.5" fill="#C8880A"/>
+            <circle cx="110" cy="78" r="3.5" fill="#C8880A"/>
+            <text x="80" y="93" text-anchor="middle" fill="#C8880A" font-size="9" font-family="DM Mono,monospace">5.00 m</text>
+          </svg>
+        </div>
+        <h2 style="font-size:20px;font-weight:800;color:#E8DCC8;letter-spacing:-.3px;margin-bottom:8px">Plan laden & Maßstab setzen</h2>
+        <p style="font-size:14px;color:#7A92A8;line-height:1.7;margin-bottom:14px">Lade den Grundriss als PDF oder Foto. Setze dann zwei Punkte auf eine bekannte Strecke — measup berechnet den Maßstab automatisch.</p>
+        <div style="background:#152130;border-left:3px solid #C8880A;border-radius:0 8px 8px 0;padding:10px 14px;font-size:12px;color:#5A7888;line-height:1.6">
+          <strong style="color:#A8C0D0">Tipp:</strong> Eine lange Referenzstrecke (z.B. eine Außenwand) ergibt genauere Ergebnisse.
         </div>
       </div>
-      <!-- Step 3 -->
+
+      <!-- Step 3: Räume zeichnen -->
       <div class="ob-step" id="ob-s3" style="display:none">
-        <div style="font-size:40px;margin-bottom:16px">✏️</div>
-        <h2 style="font-size:22px;font-weight:800;color:#f0ede7;letter-spacing:-.5px;margin-bottom:10px">Räume einzeichnen</h2>
-        <p style="font-size:15px;color:#b8b4ac;line-height:1.7">Tippe auf „Raum zeichnen" und setze Punkte um den Raum. Schließe den Raum indem du den ersten Punkt wieder antippst. measup berechnet alle Flächen sofort.</p>
-        <div style="margin-top:20px;background:#252018;border-radius:10px;padding:14px 16px;font-size:13px;color:#6a6660;line-height:1.7">
-          💡 <strong style="color:#b8b4ac">Navigieren:</strong> Zwei Finger zum Zoomen & Wischen. Am Mac: Scroll-Geste oder Leertaste + Drag.
+        <div style="margin-bottom:20px;background:#152130;border-radius:12px;padding:20px;display:flex;align-items:center;justify-content:center">
+          <svg width="220" height="110" viewBox="0 0 220 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="30" y="10" width="160" height="90" rx="6" fill="#1F3148" stroke="#2A4A68" stroke-width="1.5"/>
+            <!-- Drawn room polygon -->
+            <polygon points="55,25 145,25 145,75 100,85 55,75" fill="rgba(200,136,10,0.12)" stroke="#C8880A" stroke-width="1.8"/>
+            <!-- Corner dots -->
+            <circle cx="55" cy="25" r="4" fill="#C8880A"/>
+            <circle cx="145" cy="25" r="4" fill="#C8880A"/>
+            <circle cx="145" cy="75" r="4" fill="#C8880A"/>
+            <circle cx="100" cy="85" r="4" fill="#C8880A"/>
+            <circle cx="55" cy="75" r="4" fill="#C8880A"/>
+            <!-- Area label -->
+            <rect x="78" y="44" width="64" height="20" rx="4" fill="#1C2B3A" opacity=".9"/>
+            <text x="110" y="58" text-anchor="middle" fill="#C8880A" font-size="11" font-weight="700" font-family="DM Sans,sans-serif">18.40 m²</text>
+          </svg>
+        </div>
+        <h2 style="font-size:20px;font-weight:800;color:#E8DCC8;letter-spacing:-.3px;margin-bottom:8px">Räume einzeichnen</h2>
+        <p style="font-size:14px;color:#7A92A8;line-height:1.7;margin-bottom:14px">Tippe auf „+ Raum zeichnen" und setze Punkte entlang der Wände. Schließe den Raum indem du den ersten Punkt wieder antippst.</p>
+        <div style="background:#152130;border-left:3px solid #C8880A;border-radius:0 8px 8px 0;padding:10px 14px;font-size:12px;color:#5A7888;line-height:1.6">
+          <strong style="color:#A8C0D0">Navigation:</strong> Zwei Finger zum Zoomen & Verschieben. Am Mac: Scroll oder Leertaste+Drag.
         </div>
       </div>
-      <!-- Step 4 -->
+
+      <!-- Step 4: Dachschrägen -->
       <div class="ob-step" id="ob-s4" style="display:none">
-        <div style="font-size:40px;margin-bottom:16px">📄</div>
-        <h2 style="font-size:22px;font-weight:800;color:#f0ede7;letter-spacing:-.5px;margin-bottom:10px">PDF exportieren</h2>
-        <p style="font-size:15px;color:#b8b4ac;line-height:1.7">Wenn alle Räume erfasst sind, tippe auf „Export". Du bekommst ein sauberes PDF mit Grundriss, allen Räumen und dem Gesamtergebnis.</p>
-        <div style="margin-top:20px;background:#252018;border-radius:10px;padding:14px 16px;font-size:13px;color:#6a6660;line-height:1.7">
-          💡 <strong style="color:#b8b4ac">Tipp:</strong> Zoome vor dem Export auf den gesamten Grundriss — so erscheint der komplette Plan im PDF.
+        <div style="margin-bottom:20px;background:#152130;border-radius:12px;padding:20px;display:flex;align-items:center;justify-content:center">
+          <svg width="220" height="110" viewBox="0 0 220 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- House silhouette -->
+            <polygon points="110,12 180,50 180,98 40,98 40,50" fill="#1F3148" stroke="#2A4A68" stroke-width="1.5"/>
+            <!-- Roof line -->
+            <polyline points="40,50 110,12 180,50" fill="none" stroke="#C8880A" stroke-width="2"/>
+            <!-- Kniestock line -->
+            <line x1="40" y1="72" x2="180" y2="72" stroke="#4A8AAA" stroke-width="1.5" stroke-dasharray="5,3"/>
+            <!-- Labels -->
+            <text x="188" y="62" fill="#7A92A8" font-size="9" font-family="DM Mono,monospace">Schräge</text>
+            <text x="188" y="76" fill="#4A8AAA" font-size="9" font-family="DM Mono,monospace">Kniestock</text>
+            <!-- Dimension lines -->
+            <line x1="35" y1="72" x2="35" y2="98" stroke="#C8880A" stroke-width="1.2"/>
+            <line x1="30" y1="72" x2="40" y2="72" stroke="#C8880A" stroke-width="1.2"/>
+            <line x1="30" y1="98" x2="40" y2="98" stroke="#C8880A" stroke-width="1.2"/>
+            <text x="22" y="87" fill="#C8880A" font-size="9" font-family="DM Mono,monospace">1.2</text>
+            <!-- Floor -->
+            <rect x="40" y="92" width="140" height="6" rx="2" fill="#2A4060"/>
+          </svg>
+        </div>
+        <h2 style="font-size:20px;font-weight:800;color:#E8DCC8;letter-spacing:-.3px;margin-bottom:8px">Dachschrägen erfassen</h2>
+        <p style="font-size:14px;color:#7A92A8;line-height:1.7;margin-bottom:14px">Beim Anlegen eines Dachgeschosses aktivierst du die Dachschrägen-Option. Im Schnitt-Tab zeichnest du dann das Profil mit Kniestockhöhe und First.</p>
+        <div style="background:#152130;border-left:3px solid #4A8AAA;border-radius:0 8px 8px 0;padding:10px 14px;font-size:12px;color:#5A7888;line-height:1.6">
+          <strong style="color:#A8C0D0">Hinweis:</strong> measup berechnet Wandflächen unter Schrägen und Kniestockwände automatisch korrekt.
+        </div>
+      </div>
+
+      <!-- Step 5: Export -->
+      <div class="ob-step" id="ob-s5" style="display:none">
+        <div style="margin-bottom:20px;background:#152130;border-radius:12px;padding:20px;display:flex;align-items:center;justify-content:center">
+          <svg width="220" height="110" viewBox="0 0 220 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- PDF page -->
+            <rect x="65" y="8" width="90" height="94" rx="6" fill="#1F3148" stroke="#2A4A68" stroke-width="1.5"/>
+            <!-- Header bar -->
+            <rect x="65" y="8" width="90" height="18" rx="6" fill="#C8880A"/>
+            <rect x="65" y="20" width="90" height="6" rx="0" fill="#C8880A"/>
+            <text x="110" y="21" text-anchor="middle" fill="white" font-size="8" font-weight="700" font-family="DM Sans,sans-serif">AUFMASS</text>
+            <!-- Content rows -->
+            <rect x="75" y="34" width="70" height="4" rx="2" fill="#4A6A8A" opacity=".7"/>
+            <rect x="75" y="42" width="50" height="3" rx="1.5" fill="#3A5570" opacity=".5"/>
+            <rect x="75" y="49" width="60" height="3" rx="1.5" fill="#3A5570" opacity=".5"/>
+            <!-- Small floor plan -->
+            <rect x="75" y="57" width="70" height="30" rx="3" fill="#152130" stroke="#2A4060" stroke-width="1"/>
+            <polygon points="85,64 125,64 125,80 105,84 85,80" fill="rgba(200,136,10,0.15)" stroke="#C8880A" stroke-width="1"/>
+            <!-- Total value -->
+            <rect x="75" y="91" width="70" height="6" rx="2" fill="#C8880A" opacity=".8"/>
+            <!-- Download arrow -->
+            <circle cx="168" cy="85" r="14" fill="#C8880A"/>
+            <polyline points="168,78 168,88" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+            <polyline points="163,85 168,91 173,85" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h2 style="font-size:20px;font-weight:800;color:#E8DCC8;letter-spacing:-.3px;margin-bottom:8px">PDF exportieren</h2>
+        <p style="font-size:14px;color:#7A92A8;line-height:1.7;margin-bottom:14px">Tippe auf „Export" — du bekommst ein sauberes PDF mit Grundriss, allen Räumen, Flächen und dem Gesamtergebnis.</p>
+        <div style="background:#152130;border-left:3px solid #C8880A;border-radius:0 8px 8px 0;padding:10px 14px;font-size:12px;color:#5A7888;line-height:1.6">
+          <strong style="color:#A8C0D0">Tipp:</strong> Zoome vor dem Export auf den gesamten Grundriss — so erscheint der komplette Plan im PDF.
         </div>
       </div>
     </div>
+
     <!-- Footer -->
-    <div style="padding:16px 32px 28px;display:flex;align-items:center;justify-content:space-between">
-      <button id="ob-skip" onclick="closeOnboarding()" style="background:transparent;border:none;color:#6a6660;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;padding:8px 0">Überspringen</button>
+    <div style="padding:12px 32px 24px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #1A2A3A">
+      <button id="ob-skip" onclick="closeOnboarding()" style="background:transparent;border:none;color:#4A6278;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;padding:8px 0;transition:color .12s" onmouseover="this.style.color='#7A92A8'" onmouseout="this.style.color='#4A6278'">Überspringen</button>
       <div style="display:flex;gap:8px;align-items:center">
-        <!-- Step dots -->
-        <div style="display:flex;gap:6px">
-          <div class="ob-dot" id="ob-d1" style="width:6px;height:6px;border-radius:50%;background:#b8842a"></div>
-          <div class="ob-dot" id="ob-d2" style="width:6px;height:6px;border-radius:50%;background:#3a3a3a"></div>
-          <div class="ob-dot" id="ob-d3" style="width:6px;height:6px;border-radius:50%;background:#3a3a3a"></div>
-          <div class="ob-dot" id="ob-d4" style="width:6px;height:6px;border-radius:50%;background:#3a3a3a"></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <div class="ob-dot" id="ob-d1" style="width:7px;height:7px;border-radius:50%;background:#C8880A;transition:all .2s"></div>
+          <div class="ob-dot" id="ob-d2" style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.18);transition:all .2s"></div>
+          <div class="ob-dot" id="ob-d3" style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.18);transition:all .2s"></div>
+          <div class="ob-dot" id="ob-d4" style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.18);transition:all .2s"></div>
+          <div class="ob-dot" id="ob-d5" style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.18);transition:all .2s"></div>
         </div>
-        <button id="ob-next" onclick="obNext()" style="padding:10px 22px;background:#b8842a;border:none;border-radius:8px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-left:12px">Weiter →</button>
+        <button id="ob-next" onclick="obNext()" style="padding:10px 22px;background:#C8880A;border:none;border-radius:8px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-left:14px;box-shadow:0 2px 8px rgba(200,136,10,.35);transition:background .12s" onmouseover="this.style.background='#D49A20'" onmouseout="this.style.background='#C8880A'">Weiter →</button>
       </div>
     </div>
   </div>
