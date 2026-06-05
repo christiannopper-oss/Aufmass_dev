@@ -3313,6 +3313,7 @@ async function runKIAnalyse(){
   const refSec=document.getElementById('ki-ref-section');
   const roomsSec=document.getElementById('ki-rooms-section');
   const footer=document.getElementById('ki-footer');
+  if(!overlay||!statusEl||!refSec||!roomsSec||!footer)return;
   refSec.style.display='none';roomsSec.style.display='none';footer.style.display='none';
   document.getElementById('ki-rooms-list').innerHTML='';
   document.getElementById('ki-ref-preview').innerHTML='';
@@ -3735,6 +3736,7 @@ const OB_KEY='measup_onboarding_done';
 function showOnboarding(){
   if(localStorage.getItem(OB_KEY))return; // bereits gesehen
   const overlay=document.getElementById('onboarding-overlay');
+  if(!overlay)return;
   overlay.style.display='flex';
   obCurrentStep=1;
   obRender();
