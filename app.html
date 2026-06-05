@@ -627,11 +627,14 @@ async function loadProjects(){
   const list=document.getElementById('project-list');
   if(list)list.innerHTML='<div style="padding:24px;text-align:center;color:var(--txt3);font-size:13px">Laden …</div>';
   try{
+    const token=auth.getToken();
+    if(list)list.innerHTML+='<div style="font-size:10px;color:#888;padding:4px 24px">token: '+(token?token.slice(0,12)+'…':'KEIN TOKEN')+'</div>';
     projects=await sb.get('projects','?order=created_at.desc')||[];
+    if(list)list.innerHTML+='<div style="font-size:10px;color:#888;padding:4px 24px">projekte geladen: '+projects.length+'</div>';
     renderProjects();
   }catch(e){
     console.error('loadProjects error:',e);
-    if(list)list.innerHTML='<div style="padding:24px;text-align:center;color:var(--red);font-size:13px">Verbindungsfehler: '+e.message+'</div>';
+    if(list)list.innerHTML='<div style="padding:24px;text-align:center;color:red;font-size:13px">FEHLER: '+e.message+'</div>';
   }
 }
 
@@ -2510,7 +2513,7 @@ function toggleDachOv(){
 ['m-name','m-h'].forEach(id=>document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('m-name').value.trim())closeRoom(true);}));
 document.getElementById('r-len').addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('r-len').value)closeRef(true);});
 ['e-name','e-b','e-h','e-n'].forEach(id=>document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')closeEntry(true);}));
-document.getElementById('exp-project').addEventListener('keydown',e=>{if(e.key==='Enter')closeExport(true);});
+document.getElementById('exp-project')?.addEventListener('keydown',e=>{if(e.key==='Enter')closeExport(true);});
 document.addEventListener('keydown',e=>{
   if(e.code==='Space'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){
     spaceDown=true;cv.style.cursor='grab';e.preventDefault();return;
