@@ -9,16 +9,13 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --gold:#C8880A;--gold-lt:#D49A20;--gold-bg:rgba(200,136,10,.12);--gold-bg2:rgba(200,136,10,.22);
-  --bg:#EDEAE4;--bg2:#F8F6F2;--bg3:#E4E0D8;
-  --txt:#1A1714;--txt2:#4A4540;--txt3:#8A8078;
-  --border:#D8D4CC;--border2:#C0BAB0;
-  --nav-bg:#1C2B3A;--nav-border:#243447;--nav-txt:#E8DCC8;--nav-txt2:#7A92A8;
-  --tb-bg:#243040;--tb-border:#1A2530;--tb-txt:#8AAAC0;
-  --result-bg:#1C2B3A;
+  --gold:#b8842a;--gold-lt:#c89840;--gold-bg:rgba(184,132,42,.12);--gold-bg2:rgba(184,132,42,.22);
+  --bg:#f0ede7;--bg2:#ffffff;--bg3:#e6e2da;
+  --txt:#111111;--txt2:#3d3a35;--txt3:#7a7570;
+  --border:#d4cfc8;--border2:#b8b3aa;
   --red:#b03020;--green:#1a7a3a;--blue:#1f6aaa;--orange:#c45a08;
-  --sidebar-bg:#F8F6F2;--sidebar-border:#E0DAD2;
-  --toolbar-bg:#243040;--toolbar-border:#1A2530;
+  --sidebar-bg:#f8f5f0;--sidebar-border:#dedad2;
+  --toolbar-bg:#fafaf8;--toolbar-border:#d8d4cc;
   --radius:7px;--radius-lg:12px;
   --shadow:0 2px 12px rgba(0,0,0,.10);--shadow-lg:0 8px 32px rgba(0,0,0,.18);
 }
@@ -26,15 +23,15 @@
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);height:100dvh;overflow:hidden;display:flex;flex-direction:column;font-size:14px;padding-bottom:env(safe-area-inset-bottom,0px)}
 
 /* ── Project Screen ── */
-#project-screen{display:flex;flex-direction:column;height:100dvh;background:#EDEAE4}
-#project-header{padding:16px 24px;background:var(--nav-bg);border-bottom:1px solid var(--nav-border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:0 2px 12px rgba(0,0,0,.25)}
-#project-header .brand{font-size:22px;color:var(--nav-txt);letter-spacing:0;display:flex;align-items:center;gap:10px}
-#project-header .brand small{font-weight:400;color:var(--nav-txt2);font-size:13px;margin-left:8px;letter-spacing:.3px}
-.btn-new{padding:10px 20px;background:var(--gold);border:none;border-radius:var(--radius);color:#fff;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.2px;text-shadow:0 1px 2px rgba(0,0,0,.18);transition:background .15s;min-height:44px}
+#project-screen{display:flex;flex-direction:column;height:100dvh;background:var(--bg)}
+#project-header{padding:16px 24px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:var(--shadow)}
+#project-header .brand{font-size:22px;color:var(--txt);letter-spacing:0;display:flex;align-items:center;gap:10px}
+#project-header .brand small{font-weight:400;color:var(--txt3);font-size:13px;margin-left:8px;letter-spacing:.3px}
+.btn-new{padding:10px 20px;background:var(--gold);border:none;border-radius:var(--radius);color:#fff;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:.1px;transition:background .15s;min-height:44px}
 .btn-new:hover{background:var(--gold-lt)}
 #project-list{flex:1;overflow-y:auto;padding:24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;align-content:start}
-.project-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;cursor:pointer;transition:box-shadow .15s,border-color .15s,transform .1s;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 12px rgba(0,0,0,.05)}
-.project-card:hover{border-color:var(--gold-lt);box-shadow:0 4px 20px rgba(0,0,0,.12),0 1px 4px rgba(0,0,0,.08);transform:translateY(-2px)}
+.project-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;cursor:pointer;transition:box-shadow .15s,border-color .15s,transform .1s;display:flex;flex-direction:column;gap:6px}
+.project-card:hover{border-color:var(--gold-lt);box-shadow:var(--shadow);transform:translateY(-1px)}
 .project-card-name{font-weight:700;font-size:15px;color:var(--txt)}
 .project-card-client{font-size:13px;color:var(--txt2)}
 .project-card-dates{font-size:11px;color:var(--txt3);margin-top:4px;font-family:'DM Mono',monospace;line-height:1.8}
@@ -43,47 +40,47 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);heig
 
 /* ── Floor Screen ── */
 #floor-screen{display:none;flex-direction:column;height:100%;height:100dvh;min-height:0;position:relative}
-#floor-header{padding:12px 20px;background:var(--nav-bg);border-bottom:1px solid var(--nav-border);display:flex;align-items:center;gap:10px;flex-shrink:0;box-shadow:0 2px 12px rgba(0,0,0,.25)}
-.back-btn{padding:8px 14px;border:1px solid #2E4055;border-radius:var(--radius);background:transparent;cursor:pointer;font-family:inherit;font-size:13px;color:var(--nav-txt2);transition:all .15s;min-height:40px}
-.back-btn:hover{color:var(--nav-txt);border-color:#3A5570;background:rgba(255,255,255,0.08)}
-.floor-project-name{font-weight:600;font-size:15px;color:var(--nav-txt);flex:1}
+#floor-header{padding:12px 20px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;box-shadow:var(--shadow)}
+.back-btn{padding:8px 14px;border:1px solid var(--border2);border-radius:var(--radius);background:transparent;cursor:pointer;font-family:inherit;font-size:13px;color:var(--txt2);transition:all .15s;min-height:40px}
+.back-btn:hover{color:var(--txt);border-color:#999;background:var(--bg3)}
+.floor-project-name{font-weight:700;font-size:16px;color:var(--gold);flex:1}
 #floor-list{flex:1;overflow-y:auto;padding:20px;min-height:0;padding-bottom:80px}
-.floor-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all .15s;box-shadow:0 1px 4px rgba(0,0,0,.07),0 3px 10px rgba(0,0,0,.05)}
+.floor-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:border-color .15s,box-shadow .15s}
 .floor-card:hover{border-color:var(--gold-lt);box-shadow:var(--shadow)}
 .floor-card-name{font-weight:600;font-size:14px;color:var(--txt)}
 .floor-card-meta{font-size:12px;color:var(--txt2);margin-top:4px}
 .floor-card-right{display:flex;align-items:center;gap:8px}
 .floor-del{font-size:13px;color:var(--red);padding:7px 12px;border:1px solid rgba(192,57,43,.3);border-radius:var(--radius);cursor:pointer;transition:background .15s;min-height:36px}
 .floor-del:hover{background:rgba(192,57,43,.08)}
-#floor-bottom{padding:12px 20px;border-top:1px solid var(--nav-border);display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;background:var(--nav-bg)}
+#floor-bottom{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;background:var(--bg2)}
 
 /* ── App Screen ── */
 #app-screen{display:none;flex-direction:column;height:100dvh}
-#toolbar{background:var(--toolbar-bg);border-bottom:1px solid var(--toolbar-border);flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.2);position:sticky;top:0;z-index:10;-webkit-transform:translateZ(0);transform:translateZ(0)}
+#toolbar{background:var(--toolbar-bg);border-bottom:1px solid var(--toolbar-border);flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,.05);position:sticky;top:0;z-index:10;-webkit-transform:translateZ(0);transform:translateZ(0)}
 .tb-row{display:flex;align-items:center;gap:6px;padding:6px 16px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}.tb-row::-webkit-scrollbar{display:none}
-#tb-brand{min-height:44px;background:var(--nav-bg);border-bottom:1px solid var(--nav-border)}
-#tb-nav{min-height:42px;background:var(--tb-bg);border-bottom:1px solid var(--tb-border);padding:5px 16px}
-#tb-tools{min-height:48px;background:var(--tb-bg);border-bottom:1px solid var(--tb-border)}
-.tb-row+.tb-row{border-top:1px solid var(--tb-border);background:var(--tb-bg)}
-.tb-sep{width:1px;height:18px;background:#2E3E50;flex-shrink:0;margin:0 2px}
-.floor-label{font-size:13px;color:var(--nav-txt2);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
-.brand-sm{font-size:18px;color:var(--nav-txt);white-space:nowrap;display:flex;align-items:center;gap:8px}
+#tb-brand{min-height:44px;background:var(--bg2);border-bottom:1px solid var(--toolbar-border)}
+#tb-nav{min-height:42px;background:var(--bg3);border-bottom:1px solid var(--toolbar-border);padding:5px 16px}
+#tb-tools{min-height:48px;background:var(--toolbar-bg);border-bottom:1px solid var(--toolbar-border)}
+.tb-row+.tb-row{border-top:1px solid var(--toolbar-border);background:#fafaf8}
+.tb-sep{width:1px;height:18px;background:var(--border);flex-shrink:0;margin:0 2px}
+.floor-label{font-size:13px;color:var(--txt);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.brand-sm{font-size:18px;color:var(--txt);white-space:nowrap;display:flex;align-items:center;gap:8px}
 .tb-group{display:flex;align-items:center;gap:3px}
-.tb-label{font-size:11px;color:#4A6278;letter-spacing:.4px;font-weight:600;white-space:nowrap;padding:0 4px;font-family:'DM Sans',sans-serif;text-transform:uppercase}
+.tb-label{font-size:11px;color:var(--txt2);letter-spacing:.4px;font-weight:600;white-space:nowrap;padding:0 4px;font-family:'DM Sans',sans-serif;text-transform:uppercase}
 
-.tbtn{padding:8px 14px;border:1px solid #3A5068;border-radius:var(--radius);background:rgba(255,255,255,0.06);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#B8D0E4;white-space:nowrap;transition:all .12s;line-height:1.4;min-height:40px}
-.tbtn:hover:not(.active):not(:disabled){background:rgba(255,255,255,0.12);border-color:#4A6880;color:#DDE8F0}
-.tbtn.active{background:rgba(42,90,140,0.25);border-color:#2A5A8C;color:#7EC4E4;font-weight:600}
+.tbtn{padding:8px 14px;border:1px solid var(--border2);border-radius:var(--radius);background:transparent;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--txt2);white-space:nowrap;transition:all .12s;line-height:1.4;min-height:40px}
+.tbtn:hover:not(.active):not(:disabled){background:var(--bg3);border-color:#aaa;color:var(--txt)}
+.tbtn.active{background:var(--gold-bg2);border-color:var(--gold);color:var(--gold);font-weight:600}
 .tbtn.danger{border-color:rgba(192,57,43,.35);color:var(--red)}
 .tbtn.danger:hover:not(:disabled){background:rgba(192,57,43,.07)}
-.tbtn.warn{border-color:rgba(180,60,60,.35);color:#E08080}
+.tbtn.warn{border-color:rgba(212,100,10,.35);color:var(--orange)}
 .tbtn.warn:hover:not(:disabled){background:rgba(212,100,10,.07)}
 .tbtn.export{border-color:rgba(26,138,68,.4);color:var(--green);font-weight:600;background:rgba(26,138,68,.05)}
 .tbtn.export:hover:not(:disabled){background:rgba(26,138,68,.12)}
 .tbtn.confirm{border-color:rgba(26,138,68,.5);color:var(--green);font-weight:600;animation:pulse 1.2s infinite}
-.tbtn.primary{background:var(--gold);border-color:#B07808;color:#fff;font-weight:700;letter-spacing:.2px;box-shadow:0 1px 6px rgba(200,136,10,.35);text-shadow:0 1px 2px rgba(0,0,0,.25)}
+.tbtn.primary{background:var(--gold);border-color:var(--gold);color:#fff;font-weight:600}
 .tbtn.primary:hover:not(:disabled){background:var(--gold-lt)}
-.tbtn:disabled,.tbtn.tb-locked{opacity:.22;cursor:not-allowed;pointer-events:none}
+.tbtn:disabled,.tbtn.tb-locked{opacity:.32;cursor:not-allowed;pointer-events:none}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
 .spacer{flex:1}
 #btn-draw-active{padding:8px 14px;background:var(--gold-bg2);border:1px solid var(--gold);border-radius:var(--radius);font-size:13px;color:var(--gold);font-weight:600;white-space:nowrap;font-family:'DM Sans',sans-serif;min-height:40px;display:flex;align-items:center}
@@ -91,7 +88,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);heig
 #statusbar{padding:5px 14px;background:#e8e4dc;border-bottom:1px solid var(--border);font-size:12px;color:var(--txt2);display:flex;gap:16px;flex-shrink:0;letter-spacing:.2px;flex-wrap:wrap;font-family:'DM Mono',monospace}
 .ok{color:var(--green)}.warn-c{color:var(--orange)}
 #main{display:flex;flex:1;overflow:hidden;min-height:0}
-#cwrap{flex:1;position:relative;overflow:hidden;background:#E2DED8}
+#cwrap{flex:1;position:relative;overflow:hidden;background:#d8d4cc}
 canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none}
 #magnifier{position:absolute;width:140px;height:140px;border-radius:50%;border:2.5px solid var(--gold-lt);box-shadow:0 4px 24px rgba(0,0,0,.8);pointer-events:none;display:none;z-index:50}
 #mag-cv{border-radius:50%;display:block}
@@ -100,9 +97,9 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 #mag-cross::after{content:'';position:absolute;height:1px;width:100%;top:calc(50% - .5px);left:0;background:rgba(200,169,110,.7)}
 
 /* ── Sidebar ── */
-#sidebar{width:260px;border-left:1px solid var(--sidebar-border);display:flex;flex-direction:column;overflow:hidden;background:var(--sidebar-bg);box-shadow:-2px 0 12px rgba(0,0,0,.06)}
+#sidebar{width:260px;border-left:1px solid var(--sidebar-border);display:flex;flex-direction:column;overflow:hidden;background:var(--sidebar-bg)}
 #sb-raeume-body{flex:1;overflow-y:auto;min-height:0;display:flex;flex-direction:column}
-.sh{padding:11px 14px;border-bottom:1px solid var(--sidebar-border);font-size:10px;color:var(--txt3);letter-spacing:.8px;font-weight:700;flex-shrink:0;background:var(--sidebar-bg);font-family:'DM Mono',monospace;text-transform:uppercase}
+.sh{padding:11px 14px;border-bottom:1px solid var(--sidebar-border);font-size:11px;color:var(--txt2);letter-spacing:.8px;font-weight:700;flex-shrink:0;background:var(--bg2);font-family:'DM Mono',monospace;text-transform:uppercase}
 #rlist{padding:8px}
 .rc{padding:12px 14px;margin-bottom:6px;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--bg2);position:relative;overflow:hidden;transition:border-color .12s,box-shadow .12s;cursor:pointer}
 .rc:hover{border-color:var(--border2);box-shadow:0 1px 6px rgba(0,0,0,.06)}
@@ -111,7 +108,6 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 .rc.sel .rn span:first-child{color:var(--gold)}
 .edit-btn{font-size:12px;color:var(--txt2);border:1px solid var(--border2);border-radius:var(--radius);padding:5px 10px;background:transparent;cursor:pointer;font-family:inherit;flex-shrink:0;transition:all .12s;min-height:32px}
 .edit-btn:hover{color:var(--gold);border-color:var(--gold)}
-.edit-btn.active{color:var(--gold);border-color:var(--gold);background:var(--gold-bg2);}
 .rs{font-size:12px;color:var(--txt2);line-height:2.0}
 .rs b{color:var(--txt)}
 .rc.sel .rs b{color:var(--gold)}
@@ -125,10 +121,10 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 .add-row{display:flex;gap:4px;margin-top:7px}
 .add-row button{flex:1;padding:9px 6px;background:transparent;border:1px dashed var(--border2);border-radius:var(--radius);color:var(--txt2);font-family:inherit;font-size:13px;cursor:pointer;transition:all .12s;min-height:40px}
 .add-row button:hover{border-color:var(--gold);color:var(--gold);background:var(--gold-bg)}
-#totals{padding:12px 14px;border-top:1px solid var(--sidebar-border);display:none;flex-shrink:0;background:var(--sidebar-bg)}
+#totals{padding:12px 14px;border-top:1px solid var(--sidebar-border);display:none;flex-shrink:0;background:var(--bg2)}
 .tr{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
 .tl{color:var(--txt2)}.tv{font-weight:600;color:var(--blue)}.tv-net{font-weight:600;color:var(--green)}
-#hint{padding:12px 14px;border-top:1px solid var(--sidebar-border);font-size:12px;color:var(--txt2);line-height:1.9;flex-shrink:0;background:var(--sidebar-bg)}
+#hint{padding:12px 14px;border-top:1px solid var(--sidebar-border);font-size:12px;color:var(--txt2);line-height:1.9;flex-shrink:0;background:var(--bg2)}
 
 #drop-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;gap:14px}
 .di{width:56px;height:56px;border:1.5px dashed var(--border2);border-radius:12px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.6)}
@@ -136,8 +132,8 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 .dt{font-size:15px;color:var(--txt2);font-weight:500}
 
 /* ── Modals ── */
-.mwrap{position:fixed;z-index:600;user-select:none;min-width:300px}
-.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.24),0 2px 8px rgba(0,0,0,.12)}
+.mwrap{position:absolute;z-index:200;user-select:none;min-width:300px}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-lg)}
 .mdrag{padding:11px 14px;cursor:grab;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:#f7f4ef}
 .mdrag:active{cursor:grabbing}
 .mtitle{font-size:13px;font-weight:600;color:var(--txt)}
@@ -163,9 +159,9 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 .overlay-modal label{display:block;font-size:12px;color:var(--txt2);letter-spacing:.6px;font-weight:600;margin-bottom:6px;font-family:'DM Mono',monospace;text-transform:uppercase}
 .overlay-modal input{width:100%;padding:12px 13px;border:1px solid var(--border);border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--txt);background:var(--bg);margin-bottom:14px;outline:none;transition:border-color .15s}
 .overlay-modal input:focus{border-color:var(--gold)}
-.exp-check-row{display:flex;align-items:center;gap:16px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;color:var(--txt2);transition:background .1s;min-height:36px}
+.exp-check-row{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:13px;color:var(--txt2);transition:background .1s;min-height:42px}
 .exp-check-row:hover{background:var(--bg3)}
-.exp-check-row input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px;margin:0;margin-right:10px;flex-shrink:0;cursor:pointer}
+.exp-check-row input[type=checkbox]{accent-color:var(--gold);width:auto;margin:0;flex-shrink:0}
 .exp-check-row span{flex:1}
 /* KI Analyse Overlay */
 #ki-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
@@ -206,14 +202,13 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
         <path d="M13 46 L13 22 L30 38 L47 22 L47 46" stroke="#1a1a1a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
         <path d="M30 38 L30 14 M25 19 L30 14 L35 19" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <span style="letter-spacing:-0.5px"><span style="font-weight:700;color:#E8DCC8">meas</span><span style="font-weight:300;color:var(--gold)">up</span></span>
+      <span style="letter-spacing:-0.5px"><span style="font-weight:700;color:var(--txt)">meas</span><span style="font-weight:300;color:var(--gold)">up</span></span>
       <small>Aufmaß &amp; Flächenberechnung</small>
     </span>
     <div style="display:flex;align-items:center;gap:10px;margin-left:auto">
       <span style="font-size:12px;color:var(--txt3)" id="user-email-display"></span>
-      <a href="/howto.html" target="_blank" class="tbtn" style="font-size:13px;padding:8px 14px;border-color:#2E4055;color:var(--nav-txt2)">? Hilfe</a>
-      <button class="tbtn" onclick="openProfileOverlay()" style="font-size:13px;padding:8px 14px;border-color:#2E4055;color:var(--nav-txt2)" title="Firmenprofil">⚙ Profil</button>
-      <button class="tbtn" onclick="auth.logout()" style="font-size:13px;padding:8px 14px;border-color:#2E4055;color:var(--nav-txt2)" title="Abmelden">⎋ Abmelden</button>
+      <a href="/howto.html" target="_blank" class="tbtn" style="font-size:13px;padding:8px 14px">? Hilfe</a>
+      <button class="tbtn" onclick="auth.logout()" style="font-size:13px;padding:8px 14px" title="Abmelden">⎋ Abmelden</button>
       <button class="btn-new" onclick="openOverlay('project')">+ Neues Projekt</button>
     </div>
   </div>
@@ -257,7 +252,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
           <path d="M13 46 L13 22 L30 38 L47 22 L47 46" stroke="#1a1a1a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
           <path d="M30 38 L30 14 M25 19 L30 14 L35 19" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span style="letter-spacing:-0.5px"><span style="font-weight:700;color:#E8DCC8">meas</span><span style="font-weight:300;color:var(--gold)">up</span></span>
+        <span style="letter-spacing:-0.5px"><span style="font-weight:700;color:var(--txt)">meas</span><span style="font-weight:300;color:var(--gold)">up</span></span>
       </span>
       <div class="spacer"></div>
       <span class="floor-label" id="current-floor-label"></span>
@@ -269,9 +264,6 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
       <div class="tb-sep"></div>
       <button class="tbtn primary" onclick="document.getElementById('fi').click()">↑ Plan laden</button>
       <input id="fi" type="file" accept="application/pdf,image/*" style="display:none" onchange="loadFile(this)">
-      <select id="plan-reuse-wrap" onchange="if(this.value){window.reuseFloorPlan(this.value);this.value=''}" style="display:none;padding:8px 12px;border:1px solid #3A5068;border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#B8D0E4;background:rgba(255,255,255,0.06);cursor:pointer;min-height:40px;height:40px">
-        <option value="">↩ Plan übernehmen …</option>
-      </select>
       <button class="tbtn" id="btn-rotate" onclick="rotatePlan()">↻ Drehen</button>
       <button class="tbtn warn" id="btn-del-plan" style="display:none" onclick="deletePlan()">✕ Plan löschen</button>
       <div class="tb-sep" id="sep-views" style="display:none"></div>
@@ -280,7 +272,7 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
     </div>
     <!-- Zeile 3: Werkzeuge -->
     <div class="tb-row" id="tb-tools">
-      <span class="tb-label" style="text-transform:none">MASSSTAB</span>
+      <span class="tb-label">Maßstab</span>
       <div class="tb-group">
         <button class="tbtn" id="btn-ref" onclick="setTool('ref')">Maßstab setzen</button>
         <button class="tbtn confirm" id="btn-ref-confirm" style="display:none" onclick="confirmRef()">✓ Bestätigen</button>
@@ -391,7 +383,34 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
         </div></div>
       </div>
 
-
+      <!-- export modal -->
+      <div class="mwrap" id="mw-export" style="display:none;left:40px;top:60px">
+        <div class="modal" style="min-width:300px;width:min(380px,92vw);max-height:80dvh;display:flex;flex-direction:column"><div class="mdrag" id="md-export"><span class="mtitle">PDF Export</span><span style="font-size:9px;color:var(--txt3)">ZIEHEN</span></div>
+        <div class="mbody" style="overflow-y:auto;flex:1">
+          <label>PROJEKTBEZEICHNUNG</label><input id="exp-project" placeholder="z.B. EFH Musterstraße 1">
+          <div class="row2">
+            <div><label>AUFTRAGGEBER</label><input id="exp-client" placeholder="optional"></div>
+            <div><label>ERSTELLT VON</label><input id="exp-author" placeholder="optional"></div>
+          </div>
+          <label style="margin-bottom:8px">AUSGABE-WERTE</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:14px">
+            <label class="exp-check-row"><input type="checkbox" id="exp-grundflaeche" checked><span>Grundfläche</span></label>
+            <label class="exp-check-row"><input type="checkbox" id="exp-decke" checked><span>Deckenfläche</span></label>
+            <label class="exp-check-row"><input type="checkbox" id="exp-wand-brutto" checked><span>Wand brutto</span></label>
+            <label class="exp-check-row"><input type="checkbox" id="exp-wand-netto" checked><span>Wand netto</span></label>
+            <label class="exp-check-row"><input type="checkbox" id="exp-abzuege" checked><span>Abzüge / Zusätze</span></label>
+            <label class="exp-check-row"><input type="checkbox" id="exp-raumhoehe" checked><span>Raumhöhe</span></label>
+            <label class="exp-check-row"><input type="checkbox" id="exp-sockel" checked><span>Sockelleisten</span></label>
+            <label class="exp-check-row"><input type="checkbox" id="exp-acryl" checked><span>Acryl (lfd. Meter)</span></label>
+            <label class="exp-check-row"><input type="checkbox" id="exp-dach"><span>Dach-Detailwerte</span></label>
+          </div>
+          <label class="exp-check-row" style="margin-bottom:14px"><input type="checkbox" id="exp-grundriss" checked><span>📐 Grundriss-Übersicht im PDF</span></label>
+        </div><div class="mbtns" style="padding:12px 14px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg2)">
+            <button class="bcl" onclick="closeExport(false)">Abbrechen</button>
+            <button class="bok bok-green" onclick="closeExport(true)">↓ PDF erstellen</button>
+          </div
+        </div></div>
+      </div>
     </div>
 
     <div id="sidebar">
@@ -613,9 +632,12 @@ function showScreen(name){
   if(name==='project'){
     const s=document.getElementById('proj-search');
     if(s)s.value='';
+    // Zeige User-E-Mail
     const emailEl=document.getElementById('user-email-display');
-    if(emailEl){const u=auth.getUser();emailEl.textContent=u.email||'';}
-    // loadProjects wird separat aufgerufen um parallele 401-Refreshes zu vermeiden
+    if(emailEl){
+      const u=auth.getUser();
+      emailEl.textContent=u.email||'';
+    }
     loadProjects();
   }
   if(name==='floor')loadFloors();
@@ -627,15 +649,11 @@ async function loadProjects(){
   const list=document.getElementById('project-list');
   if(list)list.innerHTML='<div style="padding:24px;text-align:center;color:var(--txt3);font-size:13px">Laden …</div>';
   try{
-    const token=auth.getToken();
-    if(list)list.innerHTML+='<div style="font-size:10px;color:#888;padding:4px 24px">token: '+(token?token.slice(0,12)+'…':'KEIN TOKEN')+'</div>';
-    const _uid=auth.getUserId();
-    projects=await sb.get('projects','?user_id=eq.'+_uid+'&order=created_at.desc')||[];
-    if(list)list.innerHTML+='<div style="font-size:10px;color:#888;padding:4px 24px">projekte geladen: '+projects.length+'</div>';
+    projects=await sb.get('projects','?order=created_at.desc')||[];
     renderProjects();
   }catch(e){
     console.error('loadProjects error:',e);
-    if(list)list.innerHTML='<div style="padding:24px;text-align:center;color:red;font-size:13px">FEHLER: '+e.message+'</div>';
+    if(list)list.innerHTML='<div style="padding:24px;text-align:center;color:var(--red);font-size:13px">Verbindungsfehler: '+e.message+'</div>';
   }
 }
 
@@ -701,43 +719,18 @@ async function loadFloors(){
 function renderFloors(){
   const list=document.getElementById('floor-list');
   const expBtn=document.getElementById('btn-project-export');
-  if(expBtn)expBtn.style.display=floors.length>0?'flex':'none';
+  if(expBtn)expBtn.style.display=floors.length>0?'':' none';
   if(!floors.length){list.innerHTML='<div class="empty-state">Noch keine Geschosse.<br>Tippe auf „+ Geschoss hinzufügen".</div>';return;}
   list.innerHTML=floors.map((f,i)=>`
     <div class="floor-card" onclick="openFloor('${f.id}')">
-      <div style="flex:1;min-width:0">
-        <div class="floor-card-name" id="floor-name-${f.id}" ondblclick="startRenameFloor('${f.id}');event.stopPropagation()" title="Doppelklick zum Umbenennen">${f.name}</div>
+      <div>
+        <div class="floor-card-name">${f.name}</div>
         <div class="floor-card-meta">${f.scale_px_per_m?'Kalibriert ✓':'Nicht kalibriert'}${f.dach_config&&f.dach_config.aktiv?` · 🏠 Dach: Kniestock ${f.dach_config.kniestockH}m / First ${f.dach_config.firstH}m`:''}</div>
       </div>
       <div class="floor-card-right">
-        <button class="floor-del" title="Geschoss umbenennen" onclick="startRenameFloor('${f.id}');event.stopPropagation()" style="border-color:rgba(184,132,42,.3);color:var(--gold);font-size:13px">✎</button>
         <span class="floor-del" onclick="deleteFloor('${f.id}');event.stopPropagation()">✕</span>
       </div>
     </div>`).join('');
-}
-
-async function startRenameFloor(id){
-  const f=floors.find(x=>x.id===id);
-  if(!f)return;
-  const span=document.getElementById('floor-name-'+id);
-  if(!span)return;
-  const input=document.createElement('input');
-  input.value=f.name;
-  input.style.cssText='font-size:14px;font-weight:600;font-family:inherit;border:1px solid var(--gold);border-radius:4px;padding:2px 6px;width:100%;outline:none;background:var(--bg2);color:var(--txt)';
-  span.replaceWith(input);
-  input.focus();input.select();
-  const commit=async()=>{
-    const n=input.value.trim()||f.name;
-    await sb.patch('floors',{name:n},'?id=eq.'+id);
-    f.name=n;
-    renderFloors();
-    if(currentFloor&&currentFloor.id===id){
-      currentFloor.name=n;
-      document.getElementById('current-floor-label').textContent=currentProject.name+' / '+n;
-    }
-  };
-  input.addEventListener('blur',commit);
-  input.addEventListener('keydown',e=>{if(e.key==='Enter')input.blur();if(e.key==='Escape'){input.removeEventListener('blur',commit);renderFloors();}});
 }
 
 async function openFloor(id){
@@ -803,18 +796,6 @@ async function openFloor(id){
   document.getElementById('exp-author').value=currentProject.author||'';
 
   showScreen('app');
-  // Populate plan-reuse select with other floors
-  (()=>{
-    const sel=document.getElementById('plan-reuse-wrap');
-    if(!sel)return;
-    const others=floors.filter(f=>f.id!==currentFloor.id);
-    if(others.length>0){
-      sel.innerHTML='<option value="">\u21A9 Plan \u00FCbernehmen \u2026</option>'+others.map(f=>`<option value="${f.id}">${f.name}</option>`).join('');
-      sel.style.display='';
-    } else {
-      sel.style.display='none';
-    }
-  })();
   // Wait until the canvas has real dimensions before denormalizing points.
   // Poll with rAF instead of a fixed timeout – safe on slow devices and large PDFs.
   // Lock toolbar immediately while plan is loading
@@ -859,14 +840,6 @@ async function openFloor(id){
   const _sepV=document.getElementById('sep-views');if(_sepV)_sepV.style.display=_isDach?'':'none';
   const _grpD=document.getElementById('grp-dach');if(_grpD)_grpD.style.display=_isDach?'flex':'none';
   const _sepD=document.getElementById('sep-dach');if(_sepD)_sepD.style.display=_isDach?'':'none';
-  // Explicitly show/hide grp-raum based on viewMode (setView is not called on floor open)
-  const _grpRaum=document.getElementById('grp-raum');
-  const _sepRaum=document.getElementById('sep-raum');
-  const _lblRaum=document.getElementById('lbl-raum');
-  const _showRaum=viewMode!=='schnitt';
-  if(_grpRaum)_grpRaum.style.display=_showRaum?'':'none';
-  if(_sepRaum)_sepRaum.style.display=_showRaum?'':'none';
-  if(_lblRaum)_lblRaum.style.display=_showRaum?'':'none';
   updPageNav();updStatus();updSidebar();syncDebugState();draw();updToolbarLockState();
 }
 
@@ -878,19 +851,13 @@ async function deleteFloor(id){
 
 async function exportProject(){
   if(!currentProject||!floors.length)return;
-  document.getElementById('exp-project').value=currentProject.name||'';
-  document.getElementById('exp-client').value=currentProject.client||'';
-  document.getElementById('exp-author').value=currentProject.author||'';
-  // Open modal – position relative to window since cwrap may not be visible
-  const mw=document.getElementById('mw-export');
-  mw.style.display='block';
-  requestAnimationFrame(()=>{
-    const sw=window.innerWidth,sh=window.innerHeight;
-    const mh=mw.offsetHeight,mw2=mw.offsetWidth;
-    mw.style.left=Math.max(8,Math.round(sw/2-mw2/2))+'px';
-    mw.style.top=Math.max(60,Math.round((sh-mh)/2))+'px';
-    setTimeout(()=>document.getElementById('exp-project').focus(),50);
-  });
+  // Load all rooms for all floors
+  const allFloorRooms=[];
+  for(const fl of floors){
+    const fRooms=await sb.get('rooms','?floor_id=eq.'+fl.id+'&order=created_at.asc')||[];
+    allFloorRooms.push({floor:fl,rooms:fRooms});
+  }
+  generateProjectPDF(currentProject,allFloorRooms);
 }
 
 function generateProjectPDF(project,allFloorRooms){
@@ -940,7 +907,7 @@ function generateProjectPDF(project,allFloorRooms){
   }
   function checkPage(need=12){if(y+need>H-20){doc.addPage();y=MT;}}
   // helper to calc room stats with a given scale
-  function rStats(rm,sc){
+  function rStats(rm,sc,floorCtx){
     if(!sc)return{a:null,wG:null,abzSum:0,zusSum:0,wN:null};
     function pArea(pts){let a=0,n=pts.length;for(let i=0;i<n;i++){const j=(i+1)%n;a+=pts[i].x*pts[j].y-pts[j].x*pts[i].y;}return Math.abs(a/2);}
     function pPerim(pts){let p=0,n=pts.length;for(let i=0;i<n;i++){const j=(i+1)%n;p+=Math.hypot(pts[j].x-pts[i].x,pts[j].y-pts[i].y);}return p;}
@@ -950,6 +917,7 @@ function generateProjectPDF(project,allFloorRooms){
     const abzSum=(rm.abzuege||[]).reduce((s,e)=>{const av=e.b*e.h;return s+((e.vob&&av<2.5)?0:av*e.n);},0);
     const zusSum=(rm.zusaetze||[]).reduce((s,e)=>s+e.b*e.h*e.n,0);
     let deckeFlat=a, slope=0, deckeGes=a;
+    const fl=floorCtx||window._currentFloorCtx||{};
     if(fl.dach_config&&fl.dach_config.aktiv){
       const rmLocal={...rm,traufKanten:rm.trauf_kanten||rm.traufKanten||[]};
       const prevFloor=currentFloor, prevScale=scale, prevScaleG=scaleGrundriss, prevScaleS=scaleSchnitt;
@@ -977,7 +945,7 @@ function generateProjectPDF(project,allFloorRooms){
     const sc=fl.scale_px_per_m||null;
     let flWG=0,flWN=0,flCeil=0,flCeilFlat=0,flSlope=0;
     fRooms.forEach((rm,idx)=>{
-      const{a,wG,abzSum,zusSum,wN,deckeFlat,slope,deckeGes}=rStats(rm,sc);
+      const{a,wG,abzSum,zusSum,wN,deckeFlat,slope,deckeGes}=rStats(rm,sc,fl);
       checkPage(14);
       const rowColor=idx%2===0?[248,246,242]:[255,255,255];
       doc.setFillColor(...rowColor);doc.rect(ML,y,CW,10,'F');
@@ -1071,32 +1039,6 @@ function openOverlay(mode){
   }
   overlay.style.display='flex';
   setTimeout(()=>document.getElementById('ov-name')?.focus(),50);
-}
-
-function openProfileOverlay(){
-  const p=JSON.parse(localStorage.getItem('measup_profile')||'{}');
-  document.getElementById('prof-company').value=p.company||'';
-  document.getElementById('prof-name').value=p.name||'';
-  document.getElementById('prof-street').value=p.street||'';
-  document.getElementById('prof-city').value=p.city||'';
-  document.getElementById('prof-phone').value=p.phone||'';
-  document.getElementById('prof-email').value=p.email||'';
-  document.getElementById('prof-web').value=p.web||'';
-  document.getElementById('profile-overlay').style.display='flex';
-  setTimeout(()=>document.getElementById('prof-company').focus(),50);
-}
-function saveProfile(){
-  const p={
-    company:document.getElementById('prof-company').value.trim(),
-    name:document.getElementById('prof-name').value.trim(),
-    street:document.getElementById('prof-street').value.trim(),
-    city:document.getElementById('prof-city').value.trim(),
-    phone:document.getElementById('prof-phone').value.trim(),
-    email:document.getElementById('prof-email').value.trim(),
-    web:document.getElementById('prof-web').value.trim()
-  };
-  localStorage.setItem('measup_profile',JSON.stringify(p));
-  document.getElementById('profile-overlay').style.display='none';
 }
 
 function closeOverlay(){document.getElementById('overlay').style.display='none';}
@@ -1324,10 +1266,8 @@ function renderMag(wx,wy){
 }
 
 // ── DRAGGABLE MODALS ───────────────────────────────────────
-function mkDrag(hId,wId){const h=document.getElementById(hId),w=document.getElementById(wId);if(!h||!w)return;let dn=false,mx=0,my=0;h.addEventListener('mousedown',e=>{dn=true;mx=e.clientX;my=e.clientY;e.preventDefault();});document.addEventListener('mousemove',e=>{if(!dn)return;let nx=parseFloat(w.style.left||0)+(e.clientX-mx),ny=parseFloat(w.style.top||0)+(e.clientY-my);nx=Math.max(0,Math.min(window.innerWidth-w.offsetWidth,nx));ny=Math.max(0,Math.min(window.innerHeight-w.offsetHeight,ny));w.style.left=nx+'px';w.style.top=ny+'px';mx=e.clientX;my=e.clientY;});document.addEventListener('mouseup',()=>dn=false);}
-['room','ref','entry'].forEach(id=>mkDrag('md-'+id,'mw-'+id));
-// Export modal is appended to body – init drag after DOM ready
-document.addEventListener('DOMContentLoaded',()=>mkDrag('md-export','mw-export'));
+function mkDrag(hId,wId){const h=document.getElementById(hId),w=document.getElementById(wId);let dn=false,mx=0,my=0;h.addEventListener('mousedown',e=>{dn=true;mx=e.clientX;my=e.clientY;e.preventDefault();});document.addEventListener('mousemove',e=>{if(!dn)return;const wr=wrap.getBoundingClientRect();let nx=parseFloat(w.style.left||0)+(e.clientX-mx),ny=parseFloat(w.style.top||0)+(e.clientY-my);nx=Math.max(0,Math.min(wr.width-w.offsetWidth,nx));ny=Math.max(0,Math.min(wr.height-w.offsetHeight,ny));w.style.left=nx+'px';w.style.top=ny+'px';mx=e.clientX;my=e.clientY;});document.addEventListener('mouseup',()=>dn=false);}
+['room','ref','entry','export'].forEach(id=>mkDrag('md-'+id,'mw-'+id));
 
 function resize(){
   const r=wrap.getBoundingClientRect();
@@ -2134,9 +2074,9 @@ function updSidebar(){
       :`<span style="font-size:10px;color:var(--txt3);opacity:.6">Kalibrierung fehlt</span>`;
     return`<div class="rc${sel?' sel':''}" onclick="selR(${i})">
       <div class="rn"><span>${rm.name}</span><div style="display:flex;gap:4px">
-        <button class="${sel&&tool==='select'?'edit-btn active':'edit-btn'}" title="Maße bearbeiten" onclick="activateSelectForRoom(${i});event.stopPropagation()" style="padding:4px 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="8" cy="6" r="2.2" fill="currentColor" stroke="none"/><circle cx="16" cy="12" r="2.2" fill="currentColor" stroke="none"/><circle cx="10" cy="18" r="2.2" fill="currentColor" stroke="none"/></svg></button>
-        <button class="edit-btn" title="Name bearbeiten" onclick="openEditRoom(${i});event.stopPropagation()">✎</button>
-        <button class="edit-btn" title="Raum löschen" style="border-color:#c0392b33;color:#c0392b" onclick="delRoomByIdx(${i});event.stopPropagation()">✕</button>
+        <button class="edit-btn" title="Punkte bearbeiten" onclick="activateSelectForRoom(${i});event.stopPropagation()">⊹</button>
+        <button class="edit-btn" onclick="openEditRoom(${i});event.stopPropagation()">✎</button>
+        <button class="edit-btn" style="border-color:#c0392b33;color:#c0392b" onclick="delRoomByIdx(${i});event.stopPropagation()">✕</button>
       </div></div>
       ${!sel?`<div style="margin-top:2px">${preview}</div>`:`
       <div class="rs" style="margin-top:6px">Höhe: <b>${rm.height.toFixed(2)} m</b><br>${mainStats}</div>
@@ -2240,16 +2180,17 @@ function confirmRef(){
 }
 
 function centerModal(id){
+  const wr=wrap.getBoundingClientRect();
   const mw=document.getElementById(id);
   mw.style.display='block';
-  requestAnimationFrame(()=>{
-    const sw=window.innerWidth, sh=window.innerHeight;
-    const mh=mw.offsetHeight, mw2=mw.offsetWidth||340;
-    mw.style.left=Math.max(8,Math.round(sw/2-mw2/2))+'px';
-    mw.style.top=Math.max(60,Math.round((sh-mh)/2))+'px';
-  });
+  // For export modal: center vertically too, accounting for larger size
+  const mh=mw.offsetHeight||400;
+  const mw2=mw.offsetWidth||340;
+  const left=Math.max(10,Math.min(wr.width-mw2-10, wr.width/2-mw2/2));
+  const top=Math.max(10,Math.min(wr.height-mh-10, wr.height/2-mh/2));
+  mw.style.left=left+'px';
+  mw.style.top=top+'px';
 }
-
 function openRoomModal(){
   if(curPts.length<3)return;
   editRoomIdx=null;pendingPts=[...curPts];
@@ -2262,8 +2203,7 @@ function openRoomModal(){
   const isDach=currentFloor&&currentFloor.dach_config&&currentFloor.dach_config.aktiv;
   const hRow=document.getElementById('m-h-row');
   if(hRow)hRow.style.display=isDach?'none':'';
-  document.getElementById('m-h').value=(window.currentDefaultHeight||2.5).toFixed(2);document.getElementById('m-ok').disabled=false;centerModal('mw-room');setTimeout(()=>document.getElementById('m-name').focus(),50);
-}
+  document.getElementById('m-h').value=(window.currentDefaultHeight||2.5).toFixed(2);document.getElementById('m-ok').disabled=false;centerModal('mw-room');setTimeout(()=>document.getElementById('m-name').focus(),50);}
 function openEditRoom(i){
   editRoomIdx=i;pendingPts=null;
   document.getElementById('room-modal-title').textContent='Raum bearbeiten';
@@ -2327,17 +2267,7 @@ async function closeEntry(ok){
 }
 
 // ── EXPORT ─────────────────────────────────────────────────
-function openExportModal(){
-  const mw=document.getElementById('mw-export');
-  mw.style.display='block';
-  requestAnimationFrame(()=>{
-    const sw=window.innerWidth, sh=window.innerHeight;
-    const mh=mw.offsetHeight, mw2=mw.offsetWidth;
-    mw.style.left=Math.max(8,Math.round(sw/2-mw2/2))+'px';
-    mw.style.top=Math.max(60,Math.round((sh-mh)/2))+'px';
-    setTimeout(()=>document.getElementById('exp-project').focus(),50);
-  });
-}
+function openExportModal(){centerModal('mw-export');setTimeout(()=>document.getElementById('exp-project').focus(),50);}
 function closeExport(ok){
   document.getElementById('mw-export').style.display='none';
   if(!ok)return;
@@ -2397,40 +2327,13 @@ async function generatePDF(project,client,author,opts={}) {
         doc.setDrawColor(180,175,165);doc.rect(ML,y,CW,iH+4);
         doc.addImage(imgData,'JPEG',iX,y+2,iW,iH);
         y+=iH+8;
-        // Draw ref line on the snapshot image if ref points exist
-        if(refPts.length===2&&scaleGrundriss){
-          // Convert world coords to canvas pixel, then to PDF mm
-          const rp0=refPts[0],rp1=refPts[1];
-          // canvas pixel positions
-          const cx0=rp0.x*zoom+panX, cy0=rp0.y*zoom+panY;
-          const cx1=rp1.x*zoom+panX, cy1=rp1.y*zoom+panY;
-          // normalise to 0..1 within canvas
-          const nx0=cx0/cv2.width, ny0=cy0/cv2.height;
-          const nx1=cx1/cv2.width, ny1=cy1/cv2.height;
-          // pdf coords within image box
-          const px0=iX+nx0*iW, py0=y-iH-6+2+ny0*iH;
-          const px1=iX+nx1*iW, py1=y-iH-6+2+ny1*iH;
-          // Red ref line
-          doc.setDrawColor(220,50,50);doc.setLineWidth(0.6);
-          doc.line(px0,py0,px1,py1);
-          // Dots at endpoints
-          doc.setFillColor(220,50,50);
-          doc.circle(px0,py0,0.8,'F');doc.circle(px1,py1,0.8,'F');
-          doc.setLineWidth(0.2);
-        }
-        // Caption with ref value
+        // Caption
         doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(120,110,90);
         let captionText='Grundriss-Übersicht · '+rooms.length+' Raum'+(rooms.length!==1?'e':'');
         if(refLengthGrundrissM&&scaleGrundriss){
-          captionText+=' · Maßstab: '+(refLengthGrundrissM*100).toFixed(0)+' cm';
+          captionText+=' · Maßstab: '+(refLengthGrundrissM*100).toFixed(0)+' cm= Maßstab';
         }
         doc.text(captionText,ML,y);
-        // Ref legend dot
-        if(refLengthGrundrissM&&scaleGrundriss){
-          doc.setFillColor(220,50,50);doc.circle(ML+doc.getTextWidth(captionText)+2,y-1,0.8,'F');
-          doc.setFontSize(7);doc.setTextColor(180,40,40);
-          doc.text('= Maßstab',ML+doc.getTextWidth(captionText)+4,y);
-        }
         y+=6;
       }
     }catch(e){console.warn('Canvas-Snapshot fehlgeschlagen:',e);}
@@ -2514,7 +2417,7 @@ function toggleDachOv(){
 ['m-name','m-h'].forEach(id=>document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('m-name').value.trim())closeRoom(true);}));
 document.getElementById('r-len').addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('r-len').value)closeRef(true);});
 ['e-name','e-b','e-h','e-n'].forEach(id=>document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')closeEntry(true);}));
-document.getElementById('exp-project')?.addEventListener('keydown',e=>{if(e.key==='Enter')closeExport(true);});
+document.getElementById('exp-project').addEventListener('keydown',e=>{if(e.key==='Enter')closeExport(true);});
 document.addEventListener('keydown',e=>{
   if(e.code==='Space'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){
     spaceDown=true;cv.style.cursor='grab';e.preventDefault();return;
@@ -2785,38 +2688,6 @@ cv.addEventListener('pointerup',e=>{if(e.pointerType!=='mouse')lastTouchEnd=Date
 
 // ── PDF LOAD ──────────────────────────────────────────────
 function handleDrop(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf')loadPDF(f);}
-// plan-reuse uses native select - no dropdown handler needed
-window.reuseFloorPlan = async function reuseFloorPlan(srcFloorId){
-  if(!srcFloorId||!currentFloor)return;
-  const isSchnitt=viewMode==='schnitt';
-  // Load source floor data
-  // Always fetch with explicit select – plan_data not included in loadFloors list query
-  const _res=await sb.get('floors','?id=eq.'+srcFloorId+'&select=id,plan_data,schnitt_plan_data,img_rotation,schnitt_rotation,grundriss_page,schnitt_page');
-  let srcFloor=_res&&_res[0]?_res[0]:null;
-  if(!srcFloor){alert('Geschoss nicht gefunden.');return;}
-  // Pick the right plan source depending on current view
-  const src = isSchnitt
-    ? (srcFloor.schnitt_plan_data||srcFloor.plan_data||null)
-    : (srcFloor.plan_data||null);
-  if(!src){alert('Dieses Geschoss hat noch keinen '+(isSchnitt?'Schnitt-':'')+'Plan.');return;}
-  const i=new Image();
-  await new Promise(res=>{i.onload=res;i.src=src;});
-  const r=document.getElementById('cwrap').getBoundingClientRect();
-  const ratio=Math.min((r.width-40)/i.width,(r.height-40)/i.height);
-  if(isSchnitt){
-    schnittImg=i;schnittW=i.width*ratio;schnittH=i.height*ratio;
-    schnittX=(r.width-schnittW)/2;schnittY=(r.height-schnittH)/2;
-    await savePlanSnapshot(src,true,1);
-  } else {
-    img=i;imgW=i.width*ratio;imgH=i.height*ratio;
-    imgX=(r.width-imgW)/2;imgY=(r.height-imgH)/2;
-    zoom=1;panX=0;panY=0;
-    document.getElementById('drop-hint').style.display='none';
-    await savePlanSnapshot(src,false,1);
-  }
-  updPageNav();draw();updToolbarLockState();updStatus();
-}
-
 function loadFile(inp){
   if(!inp.files[0])return;
   // ensure we load into the correct view
@@ -3082,6 +2953,7 @@ async function deletePlan(){
     schnittPts=[];schnittClosed=false;schnittDrawMode=false;scaleSchnitt=null;
     clearPlanCache(true);
   } else {
+    img=null;imgX=0;imgY=0;imgW=0;imgH=0; // globale Canvas-Variable nullen
     grundrissImg=null;grundrissX=0;grundrissY=0;grundrissW=0;grundrissH=0;
     rooms=[];selRoom=null;curPts=[];scaleGrundriss=null;refPts=[];refConfirmed=false;
     clearPlanCache(false);
@@ -3240,11 +3112,6 @@ function updToolbarLockState(){
   const hasPlan=!!(img||schnittImg);
   const delPlanBtn=document.getElementById('btn-del-plan');
   if(delPlanBtn)delPlanBtn.style.display=hasPlan?'':'none';
-  // btn-rotate: always unlock when plan present
-  const rotBtn=document.getElementById('btn-rotate');
-  if(rotBtn)rotBtn.classList.toggle('tb-locked',!hasPlan);
-  const delBtn=document.getElementById('btn-del-plan');
-  if(delBtn)delBtn.classList.toggle('tb-locked',!hasPlan);
   const isDach=!!(currentFloor?.dach_config?.aktiv);
   if(isDach && viewMode==='schnitt'){
     const hasRef=refConfirmed||(refPtsSchnitt.length===2);
@@ -3295,6 +3162,7 @@ function saveApiKey(){
   if(!k.startsWith('sk-ant-')){alert('Ungültiger API-Key. Muss mit sk-ant- beginnen.');return;}
   localStorage.setItem('anthropic_api_key',k);
   document.getElementById('ki-apikey-overlay').style.display='none';
+  runKIAnalyse();
 }
 
 function startKIAnalyse(){
@@ -3314,7 +3182,6 @@ async function runKIAnalyse(){
   const refSec=document.getElementById('ki-ref-section');
   const roomsSec=document.getElementById('ki-rooms-section');
   const footer=document.getElementById('ki-footer');
-  if(!overlay||!statusEl||!refSec||!roomsSec||!footer)return;
   refSec.style.display='none';roomsSec.style.display='none';footer.style.display='none';
   document.getElementById('ki-rooms-list').innerHTML='';
   document.getElementById('ki-ref-preview').innerHTML='';
@@ -3471,7 +3338,7 @@ Antworte NUR mit JSON, kein Text davor/danach:
       kiResults.ref={pts:[p1,p2],lengthM:r.lengthM,confidence:r.confidence};
       refSec.style.display='';
       document.getElementById('ki-ref-preview').innerHTML=
-        `Maß erkannt: <b>${r.lengthM} m</b> &nbsp;·&nbsp; Konfidenz: <b>${r.confidence||'hoch'}</b><br>
+        `Maß erkannt: <b>${r.lengthM} m</b> &nbsp;·&nbsp; Konfidenz: <b>${r.confidence}</b><br>
          <span style="font-size:10px;opacity:.7">Die Ref-Punkte werden beim Übernehmen direkt gesetzt und kalibriert.</span>`;
     }
 
@@ -3737,7 +3604,6 @@ const OB_KEY='measup_onboarding_done';
 function showOnboarding(){
   if(localStorage.getItem(OB_KEY))return; // bereits gesehen
   const overlay=document.getElementById('onboarding-overlay');
-  if(!overlay)return;
   overlay.style.display='flex';
   obCurrentStep=1;
   obRender();
@@ -3749,7 +3615,7 @@ function closeOnboarding(){
 }
 
 function obNext(){
-  if(obCurrentStep<5){
+  if(obCurrentStep<4){
     obCurrentStep++;
     obRender();
   } else {
@@ -3758,24 +3624,32 @@ function obNext(){
 }
 
 function obRender(){
-  for(let i=1;i<=5;i++){const s=document.getElementById('ob-s'+i);if(s)s.style.display=i===obCurrentStep?'':'none';}
-  for(let i=1;i<=5;i++){const d=document.getElementById('ob-d'+i);if(d){d.style.background=i===obCurrentStep?'#C8880A':'rgba(255,255,255,0.18)';d.style.transform=i===obCurrentStep?'scale(1.3)':'scale(1)';}}
+  // Steps
+  for(let i=1;i<=4;i++){
+    const s=document.getElementById('ob-s'+i);
+    if(s)s.style.display=i===obCurrentStep?'':'none';
+  }
+  // Dots
+  for(let i=1;i<=4;i++){
+    const d=document.getElementById('ob-d'+i);
+    if(d)d.style.background=i===obCurrentStep?'#b8842a':'#3a3a3a';
+  }
+  // Progress bar
   const prog=document.getElementById('ob-progress');
-  if(prog)prog.style.width=(obCurrentStep/5*100)+'%';
+  if(prog)prog.style.width=(obCurrentStep/4*100)+'%';
+  // Step indicator
   const ind=document.getElementById('ob-step-indicator');
-  if(ind)ind.textContent='SCHRITT '+obCurrentStep+' VON 5';
+  if(ind)ind.textContent='SCHRITT '+obCurrentStep+' VON 4';
+  // Button text
   const btn=document.getElementById('ob-next');
-  if(btn)btn.textContent=obCurrentStep===5?'Los geht\'s ✓':'Weiter →';
+  if(btn)btn.textContent=obCurrentStep===4?'Los geht\'s ✓':'Weiter →';
+  // Skip text
   const skip=document.getElementById('ob-skip');
-  if(skip)skip.style.visibility=obCurrentStep===5?'hidden':'visible';
+  if(skip)skip.style.visibility=obCurrentStep===4?'hidden':'visible';
 }
 // ── INIT ─────────────────────────────────────────────────
+showScreen('project');
 showOnboarding();
-// Token erst refreshen, dann Screen anzeigen – verhindert parallele 401-Requests
-(async()=>{
-  await auth.refresh().catch(()=>{});
-  showScreen('project');
-})();
 </script>
 <!-- JSON Import Modal -->
 <div id="json-import-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:600;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)">
@@ -3812,27 +3686,9 @@ showOnboarding();
 </div>
 
 <!-- KI Analyse Overlay -->
-<!-- ── PROFIL-OVERLAY ── -->
-<div id="profile-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:500;backdrop-filter:blur(2px)">
-  <div class="overlay-modal" style="min-width:340px;max-width:94vw">
-    <h3>Firmenprofil</h3>
-    <label>FIRMENNAME</label><input id="prof-company" placeholder="z.B. Malerbetrieb Müller GmbH">
-    <label>INHABER / ANSPRECHPARTNER</label><input id="prof-name" placeholder="z.B. Hans Müller">
-    <label>STRASSE & HAUSNUMMER</label><input id="prof-street" placeholder="z.B. Musterstraße 12">
-    <label>PLZ & ORT</label><input id="prof-city" placeholder="z.B. 41812 Erkelenz">
-    <label>TELEFON</label><input id="prof-phone" placeholder="z.B. 02431 123456">
-    <label>E-MAIL</label><input id="prof-email" type="email" placeholder="z.B. info@malerbetrieb.de">
-    <label>WEBSEITE</label><input id="prof-web" placeholder="z.B. www.malerbetrieb.de">
-    <div style="display:flex;gap:10px;margin-top:6px">
-      <button class="bok" onclick="saveProfile()">Speichern</button>
-      <button class="bcancel" onclick="document.getElementById('profile-overlay').style.display='none'">Abbrechen</button>
-    </div>
-  </div>
-</div>
-
 <div id="ki-overlay">
   <div id="ki-modal">
-    <h3>✦ KI-Erkennung <span class="ki-badge">Claude Vision</span></h3>
+    <h3>✦ KI-Erkennung <span class="ki-badge">ChatGPT Vision</span></h3>
     <div class="ki-status" id="ki-status">Analysiere Plan...</div>
     <div id="ki-ref-section" style="display:none">
       <div style="font-size:11px;font-weight:600;color:var(--txt2);margin-bottom:6px;letter-spacing:.5px">REFERENZPUNKT ERKANNT</div>
@@ -3850,198 +3706,67 @@ showOnboarding();
 </div>
 
 <!-- ── ONBOARDING WIZARD ────────────────────────────────── -->
-<div id="onboarding-overlay" style="display:none;position:fixed;inset:0;background:rgba(10,16,26,.88);backdrop-filter:blur(6px);z-index:1000;align-items:center;justify-content:center;padding:16px">
-  <div style="background:#1C2B3A;border:1px solid #2A3D52;border-radius:20px;max-width:520px;width:100%;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,.7)">
+<div id="onboarding-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#1e1b14;border:1px solid #3a3a3a;border-radius:18px;max-width:480px;width:100%;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,.6)">
     <!-- Progress bar -->
-    <div style="height:3px;background:#152130">
-      <div id="ob-progress" style="height:100%;background:#C8880A;transition:width .4s ease;width:20%"></div>
+    <div style="height:3px;background:#2e2e2e">
+      <div id="ob-progress" style="height:100%;background:#b8842a;transition:width .3s;width:25%"></div>
     </div>
     <!-- Content -->
-    <div style="padding:32px 32px 20px">
-      <div id="ob-step-indicator" style="font-size:10px;font-weight:700;letter-spacing:2px;color:#4A6278;font-family:'DM Mono',monospace;margin-bottom:22px">SCHRITT 1 VON 5</div>
-
-      <!-- Step 1: Projekt anlegen -->
+    <div style="padding:36px 32px 28px">
+      <div id="ob-step-indicator" style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#6a6660;font-family:'DM Mono',monospace;margin-bottom:20px">SCHRITT 1 VON 4</div>
+      <!-- Step 1 -->
       <div class="ob-step" id="ob-s1">
-        <div style="margin-bottom:20px;background:#152130;border-radius:12px;padding:20px;display:flex;align-items:center;justify-content:center">
-          <svg width="220" height="110" viewBox="0 0 220 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="20" y="20" width="80" height="70" rx="8" fill="#1F3148" stroke="#2A4A68" stroke-width="1.5"/>
-            <rect x="28" y="34" width="64" height="7" rx="3" fill="#C8880A" opacity=".7"/>
-            <rect x="28" y="47" width="44" height="5" rx="2.5" fill="#3A5570" opacity=".8"/>
-            <rect x="28" y="58" width="52" height="5" rx="2.5" fill="#3A5570" opacity=".5"/>
-            <rect x="28" y="69" width="36" height="5" rx="2.5" fill="#3A5570" opacity=".4"/>
-            <rect x="28" y="22" width="20" height="8" rx="3" fill="#C8880A"/>
-            <rect x="120" y="20" width="80" height="70" rx="8" fill="#1F3148" stroke="#C8880A" stroke-width="1.5"/>
-            <rect x="128" y="34" width="64" height="7" rx="3" fill="#C8880A"/>
-            <rect x="128" y="47" width="44" height="5" rx="2.5" fill="#4A6A8A" opacity=".9"/>
-            <rect x="128" y="58" width="52" height="5" rx="2.5" fill="#4A6A8A" opacity=".6"/>
-            <rect x="128" y="69" width="36" height="5" rx="2.5" fill="#4A6A8A" opacity=".4"/>
-            <circle cx="170" cy="85" r="12" fill="#C8880A"/>
-            <text x="170" y="90" text-anchor="middle" fill="white" font-size="14" font-weight="700">+</text>
-            <rect x="128" y="22" width="20" height="8" rx="3" fill="#C8880A"/>
-          </svg>
-        </div>
-        <h2 style="font-size:20px;font-weight:800;color:#E8DCC8;letter-spacing:-.3px;margin-bottom:8px">Projekt anlegen</h2>
-        <p style="font-size:14px;color:#7A92A8;line-height:1.7;margin-bottom:14px">Lege zuerst ein Projekt an — z.B. der Kundenname oder die Adresse. Innerhalb eines Projekts erfasst du beliebig viele Geschosse.</p>
-        <div style="background:#152130;border-left:3px solid #C8880A;border-radius:0 8px 8px 0;padding:10px 14px;font-size:12px;color:#5A7888;line-height:1.6">
-          <strong style="color:#A8C0D0">Tipp:</strong> Ein Projekt pro Auftrag — so bleiben alle Aufmaße sauber getrennt.
+        <div style="font-size:40px;margin-bottom:16px">📁</div>
+        <h2 style="font-size:22px;font-weight:800;color:#f0ede7;letter-spacing:-.5px;margin-bottom:10px">Projekt anlegen</h2>
+        <p style="font-size:15px;color:#b8b4ac;line-height:1.7">Lege zuerst ein Projekt an — z.B. der Name des Kunden oder die Adresse. Innerhalb eines Projekts kannst du mehrere Geschosse erfassen.</p>
+        <div style="margin-top:20px;background:#252018;border-radius:10px;padding:14px 16px;font-size:13px;color:#6a6660;line-height:1.7">
+          💡 <strong style="color:#b8b4ac">Tipp:</strong> Lege für jeden Auftrag ein eigenes Projekt an. So bleiben deine Aufmaße sauber getrennt.
         </div>
       </div>
-
-      <!-- Step 2: Plan laden -->
+      <!-- Step 2 -->
       <div class="ob-step" id="ob-s2" style="display:none">
-        <div style="margin-bottom:20px;background:#152130;border-radius:12px;padding:20px;display:flex;align-items:center;justify-content:center">
-          <svg width="220" height="110" viewBox="0 0 220 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="30" y="10" width="160" height="90" rx="6" fill="#1F3148" stroke="#2A4A68" stroke-width="1.5"/>
-            <!-- Floor plan lines -->
-            <rect x="45" y="25" width="55" height="40" rx="2" fill="none" stroke="#4A6A8A" stroke-width="1.2"/>
-            <rect x="105" y="25" width="70" height="25" rx="2" fill="none" stroke="#4A6A8A" stroke-width="1.2"/>
-            <rect x="105" y="55" width="35" height="20" rx="2" fill="none" stroke="#4A6A8A" stroke-width="1.2"/>
-            <rect x="143" y="55" width="32" height="20" rx="2" fill="none" stroke="#4A6A8A" stroke-width="1.2"/>
-            <!-- Scale line -->
-            <line x1="50" y1="78" x2="110" y2="78" stroke="#C8880A" stroke-width="2" stroke-dasharray="4,3"/>
-            <circle cx="50" cy="78" r="3.5" fill="#C8880A"/>
-            <circle cx="110" cy="78" r="3.5" fill="#C8880A"/>
-            <text x="80" y="93" text-anchor="middle" fill="#C8880A" font-size="9" font-family="DM Mono,monospace">5.00 m</text>
-          </svg>
-        </div>
-        <h2 style="font-size:20px;font-weight:800;color:#E8DCC8;letter-spacing:-.3px;margin-bottom:8px">Plan laden & Maßstab setzen</h2>
-        <p style="font-size:14px;color:#7A92A8;line-height:1.7;margin-bottom:14px">Lade den Grundriss als PDF oder Foto. Setze dann zwei Punkte auf eine bekannte Strecke — measup berechnet den Maßstab automatisch.</p>
-        <div style="background:#152130;border-left:3px solid #C8880A;border-radius:0 8px 8px 0;padding:10px 14px;font-size:12px;color:#5A7888;line-height:1.6">
-          <strong style="color:#A8C0D0">Tipp:</strong> Eine lange Referenzstrecke (z.B. eine Außenwand) ergibt genauere Ergebnisse.
+        <div style="font-size:40px;margin-bottom:16px">📐</div>
+        <h2 style="font-size:22px;font-weight:800;color:#f0ede7;letter-spacing:-.5px;margin-bottom:10px">Plan laden & Maßstab setzen</h2>
+        <p style="font-size:15px;color:#b8b4ac;line-height:1.7">Lade den Grundriss als PDF oder Foto. Dann setzt du zwei Punkte auf eine bekannte Strecke — measup berechnet daraus den Maßstab automatisch.</p>
+        <div style="margin-top:20px;background:#252018;border-radius:10px;padding:14px 16px;font-size:13px;color:#6a6660;line-height:1.7">
+          💡 <strong style="color:#b8b4ac">Tipp:</strong> Ideal ist eine Wand oder Tür deren Maß du kennst. Je länger die Referenzstrecke, desto genauer das Ergebnis.
         </div>
       </div>
-
-      <!-- Step 3: Räume zeichnen -->
+      <!-- Step 3 -->
       <div class="ob-step" id="ob-s3" style="display:none">
-        <div style="margin-bottom:20px;background:#152130;border-radius:12px;padding:20px;display:flex;align-items:center;justify-content:center">
-          <svg width="220" height="110" viewBox="0 0 220 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="30" y="10" width="160" height="90" rx="6" fill="#1F3148" stroke="#2A4A68" stroke-width="1.5"/>
-            <!-- Drawn room polygon -->
-            <polygon points="55,25 145,25 145,75 100,85 55,75" fill="rgba(200,136,10,0.12)" stroke="#C8880A" stroke-width="1.8"/>
-            <!-- Corner dots -->
-            <circle cx="55" cy="25" r="4" fill="#C8880A"/>
-            <circle cx="145" cy="25" r="4" fill="#C8880A"/>
-            <circle cx="145" cy="75" r="4" fill="#C8880A"/>
-            <circle cx="100" cy="85" r="4" fill="#C8880A"/>
-            <circle cx="55" cy="75" r="4" fill="#C8880A"/>
-            <!-- Area label -->
-            <rect x="78" y="44" width="64" height="20" rx="4" fill="#1C2B3A" opacity=".9"/>
-            <text x="110" y="58" text-anchor="middle" fill="#C8880A" font-size="11" font-weight="700" font-family="DM Sans,sans-serif">18.40 m²</text>
-          </svg>
-        </div>
-        <h2 style="font-size:20px;font-weight:800;color:#E8DCC8;letter-spacing:-.3px;margin-bottom:8px">Räume einzeichnen</h2>
-        <p style="font-size:14px;color:#7A92A8;line-height:1.7;margin-bottom:14px">Tippe auf „+ Raum zeichnen" und setze Punkte entlang der Wände. Schließe den Raum indem du den ersten Punkt wieder antippst.</p>
-        <div style="background:#152130;border-left:3px solid #C8880A;border-radius:0 8px 8px 0;padding:10px 14px;font-size:12px;color:#5A7888;line-height:1.6">
-          <strong style="color:#A8C0D0">Navigation:</strong> Zwei Finger zum Zoomen & Verschieben. Am Mac: Scroll oder Leertaste+Drag.
+        <div style="font-size:40px;margin-bottom:16px">✏️</div>
+        <h2 style="font-size:22px;font-weight:800;color:#f0ede7;letter-spacing:-.5px;margin-bottom:10px">Räume einzeichnen</h2>
+        <p style="font-size:15px;color:#b8b4ac;line-height:1.7">Tippe auf „Raum zeichnen" und setze Punkte um den Raum. Schließe den Raum indem du den ersten Punkt wieder antippst. measup berechnet alle Flächen sofort.</p>
+        <div style="margin-top:20px;background:#252018;border-radius:10px;padding:14px 16px;font-size:13px;color:#6a6660;line-height:1.7">
+          💡 <strong style="color:#b8b4ac">Navigieren:</strong> Zwei Finger zum Zoomen & Wischen. Am Mac: Scroll-Geste oder Leertaste + Drag.
         </div>
       </div>
-
-      <!-- Step 4: Dachschrägen -->
+      <!-- Step 4 -->
       <div class="ob-step" id="ob-s4" style="display:none">
-        <div style="margin-bottom:20px;background:#152130;border-radius:12px;padding:20px;display:flex;align-items:center;justify-content:center">
-          <svg width="220" height="110" viewBox="0 0 220 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <!-- House silhouette -->
-            <polygon points="110,12 180,50 180,98 40,98 40,50" fill="#1F3148" stroke="#2A4A68" stroke-width="1.5"/>
-            <!-- Roof line -->
-            <polyline points="40,50 110,12 180,50" fill="none" stroke="#C8880A" stroke-width="2"/>
-            <!-- Kniestock line -->
-            <line x1="40" y1="72" x2="180" y2="72" stroke="#4A8AAA" stroke-width="1.5" stroke-dasharray="5,3"/>
-            <!-- Labels -->
-            <text x="188" y="62" fill="#7A92A8" font-size="9" font-family="DM Mono,monospace">Schräge</text>
-            <text x="188" y="76" fill="#4A8AAA" font-size="9" font-family="DM Mono,monospace">Kniestock</text>
-            <!-- Dimension lines -->
-            <line x1="35" y1="72" x2="35" y2="98" stroke="#C8880A" stroke-width="1.2"/>
-            <line x1="30" y1="72" x2="40" y2="72" stroke="#C8880A" stroke-width="1.2"/>
-            <line x1="30" y1="98" x2="40" y2="98" stroke="#C8880A" stroke-width="1.2"/>
-            <text x="22" y="87" fill="#C8880A" font-size="9" font-family="DM Mono,monospace">1.2</text>
-            <!-- Floor -->
-            <rect x="40" y="92" width="140" height="6" rx="2" fill="#2A4060"/>
-          </svg>
-        </div>
-        <h2 style="font-size:20px;font-weight:800;color:#E8DCC8;letter-spacing:-.3px;margin-bottom:8px">Dachschrägen erfassen</h2>
-        <p style="font-size:14px;color:#7A92A8;line-height:1.7;margin-bottom:14px">Beim Anlegen eines Dachgeschosses aktivierst du die Dachschrägen-Option. Im Schnitt-Tab zeichnest du dann das Profil mit Kniestockhöhe und First.</p>
-        <div style="background:#152130;border-left:3px solid #4A8AAA;border-radius:0 8px 8px 0;padding:10px 14px;font-size:12px;color:#5A7888;line-height:1.6">
-          <strong style="color:#A8C0D0">Hinweis:</strong> measup berechnet Wandflächen unter Schrägen und Kniestockwände automatisch korrekt.
-        </div>
-      </div>
-
-      <!-- Step 5: Export -->
-      <div class="ob-step" id="ob-s5" style="display:none">
-        <div style="margin-bottom:20px;background:#152130;border-radius:12px;padding:20px;display:flex;align-items:center;justify-content:center">
-          <svg width="220" height="110" viewBox="0 0 220 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <!-- PDF page -->
-            <rect x="65" y="8" width="90" height="94" rx="6" fill="#1F3148" stroke="#2A4A68" stroke-width="1.5"/>
-            <!-- Header bar -->
-            <rect x="65" y="8" width="90" height="18" rx="6" fill="#C8880A"/>
-            <rect x="65" y="20" width="90" height="6" rx="0" fill="#C8880A"/>
-            <text x="110" y="21" text-anchor="middle" fill="white" font-size="8" font-weight="700" font-family="DM Sans,sans-serif">AUFMASS</text>
-            <!-- Content rows -->
-            <rect x="75" y="34" width="70" height="4" rx="2" fill="#4A6A8A" opacity=".7"/>
-            <rect x="75" y="42" width="50" height="3" rx="1.5" fill="#3A5570" opacity=".5"/>
-            <rect x="75" y="49" width="60" height="3" rx="1.5" fill="#3A5570" opacity=".5"/>
-            <!-- Small floor plan -->
-            <rect x="75" y="57" width="70" height="30" rx="3" fill="#152130" stroke="#2A4060" stroke-width="1"/>
-            <polygon points="85,64 125,64 125,80 105,84 85,80" fill="rgba(200,136,10,0.15)" stroke="#C8880A" stroke-width="1"/>
-            <!-- Total value -->
-            <rect x="75" y="91" width="70" height="6" rx="2" fill="#C8880A" opacity=".8"/>
-            <!-- Download arrow -->
-            <circle cx="168" cy="85" r="14" fill="#C8880A"/>
-            <polyline points="168,78 168,88" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-            <polyline points="163,85 168,91 173,85" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <h2 style="font-size:20px;font-weight:800;color:#E8DCC8;letter-spacing:-.3px;margin-bottom:8px">PDF exportieren</h2>
-        <p style="font-size:14px;color:#7A92A8;line-height:1.7;margin-bottom:14px">Tippe auf „Export" — du bekommst ein sauberes PDF mit Grundriss, allen Räumen, Flächen und dem Gesamtergebnis.</p>
-        <div style="background:#152130;border-left:3px solid #C8880A;border-radius:0 8px 8px 0;padding:10px 14px;font-size:12px;color:#5A7888;line-height:1.6">
-          <strong style="color:#A8C0D0">Tipp:</strong> Zoome vor dem Export auf den gesamten Grundriss — so erscheint der komplette Plan im PDF.
+        <div style="font-size:40px;margin-bottom:16px">📄</div>
+        <h2 style="font-size:22px;font-weight:800;color:#f0ede7;letter-spacing:-.5px;margin-bottom:10px">PDF exportieren</h2>
+        <p style="font-size:15px;color:#b8b4ac;line-height:1.7">Wenn alle Räume erfasst sind, tippe auf „Export". Du bekommst ein sauberes PDF mit Grundriss, allen Räumen und dem Gesamtergebnis.</p>
+        <div style="margin-top:20px;background:#252018;border-radius:10px;padding:14px 16px;font-size:13px;color:#6a6660;line-height:1.7">
+          💡 <strong style="color:#b8b4ac">Tipp:</strong> Zoome vor dem Export auf den gesamten Grundriss — so erscheint der komplette Plan im PDF.
         </div>
       </div>
     </div>
-
     <!-- Footer -->
-    <div style="padding:12px 32px 24px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #1A2A3A">
-      <button id="ob-skip" onclick="closeOnboarding()" style="background:transparent;border:none;color:#4A6278;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;padding:8px 0;transition:color .12s" onmouseover="this.style.color='#7A92A8'" onmouseout="this.style.color='#4A6278'">Überspringen</button>
+    <div style="padding:16px 32px 28px;display:flex;align-items:center;justify-content:space-between">
+      <button id="ob-skip" onclick="closeOnboarding()" style="background:transparent;border:none;color:#6a6660;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;padding:8px 0">Überspringen</button>
       <div style="display:flex;gap:8px;align-items:center">
-        <div style="display:flex;gap:6px;align-items:center">
-          <div class="ob-dot" id="ob-d1" style="width:7px;height:7px;border-radius:50%;background:#C8880A;transition:all .2s"></div>
-          <div class="ob-dot" id="ob-d2" style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.18);transition:all .2s"></div>
-          <div class="ob-dot" id="ob-d3" style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.18);transition:all .2s"></div>
-          <div class="ob-dot" id="ob-d4" style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.18);transition:all .2s"></div>
-          <div class="ob-dot" id="ob-d5" style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.18);transition:all .2s"></div>
+        <!-- Step dots -->
+        <div style="display:flex;gap:6px">
+          <div class="ob-dot" id="ob-d1" style="width:6px;height:6px;border-radius:50%;background:#b8842a"></div>
+          <div class="ob-dot" id="ob-d2" style="width:6px;height:6px;border-radius:50%;background:#3a3a3a"></div>
+          <div class="ob-dot" id="ob-d3" style="width:6px;height:6px;border-radius:50%;background:#3a3a3a"></div>
+          <div class="ob-dot" id="ob-d4" style="width:6px;height:6px;border-radius:50%;background:#3a3a3a"></div>
         </div>
-        <button id="ob-next" onclick="obNext()" style="padding:10px 22px;background:#C8880A;border:none;border-radius:8px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-left:14px;box-shadow:0 2px 8px rgba(200,136,10,.35);transition:background .12s" onmouseover="this.style.background='#D49A20'" onmouseout="this.style.background='#C8880A'">Weiter →</button>
+        <button id="ob-next" onclick="obNext()" style="padding:10px 22px;background:#b8842a;border:none;border-radius:8px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-left:12px">Weiter →</button>
       </div>
     </div>
   </div>
 </div>
-
-<!-- export modal -->
-      <div class="mwrap" id="mw-export" style="display:none;left:40px;top:20px">
-        <div class="modal" style="min-width:300px;width:min(480px,92vw);display:flex;flex-direction:column"><div class="mdrag" id="md-export"><span class="mtitle">PDF Export</span><span style="font-size:9px;color:var(--txt3)">ZIEHEN</span></div>
-        <div class="mbody" style="overflow-y:auto;flex:1;max-height:min(60vh,480px)">
-          <label>PROJEKTBEZEICHNUNG</label><input id="exp-project" placeholder="z.B. EFH Musterstraße 1">
-          <div class="row2">
-            <div><label>AUFTRAGGEBER</label><input id="exp-client" placeholder="optional"></div>
-            <div><label>ERSTELLT VON</label><input id="exp-author" placeholder="optional"></div>
-          </div>
-          <label style="margin-bottom:8px">AUSGABE-WERTE</label>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:14px">
-            <label class="exp-check-row"><input type="checkbox" id="exp-grundflaeche" checked><span>Grundfläche</span></label>
-            <label class="exp-check-row"><input type="checkbox" id="exp-decke" checked><span>Deckenfläche</span></label>
-            <label class="exp-check-row"><input type="checkbox" id="exp-wand-brutto" checked><span>Wand brutto</span></label>
-            <label class="exp-check-row"><input type="checkbox" id="exp-wand-netto" checked><span>Wand netto</span></label>
-            <label class="exp-check-row"><input type="checkbox" id="exp-abzuege" checked><span>Abzüge / Zusätze</span></label>
-            <label class="exp-check-row"><input type="checkbox" id="exp-raumhoehe" checked><span>Raumhöhe</span></label>
-            <label class="exp-check-row"><input type="checkbox" id="exp-sockel" checked><span>Sockelleisten</span></label>
-            <label class="exp-check-row"><input type="checkbox" id="exp-acryl" checked><span>Acryl (lfd. Meter)</span></label>
-            <label class="exp-check-row"><input type="checkbox" id="exp-dach"><span>Dach-Detailwerte</span></label>
-          </div>
-          <label class="exp-check-row" style="margin-bottom:14px"><input type="checkbox" id="exp-grundriss" checked><span>📐 Grundriss-Übersicht im PDF</span></label>
-        </div><div class="mbtns" style="padding:12px 14px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg2)">
-            <button class="bcl" onclick="closeExport(false)">Abbrechen</button>
-            <button class="bok bok-green" onclick="closeExport(true)">↓ PDF erstellen</button>
-          </div
-        </div></div>
-      </div>
 </body>
 </html>
