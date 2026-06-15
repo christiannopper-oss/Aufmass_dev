@@ -851,6 +851,12 @@ async function deleteFloor(id){
 
 async function exportProject(){
   if(!currentProject||!floors.length)return;
+  // Zeige Export-Modal, dann warte auf Bestätigung
+  window._exportMode='project';
+  openExportModal();
+}
+async function _doExportProject(){
+  const opts=window._exportOpts||{};
   // Load all rooms for all floors
   const allFloorRooms=[];
   for(const fl of floors){
@@ -880,10 +886,10 @@ async function exportProject(){
     });
     allFloorRooms.push({floor:fl,rooms:fRooms});
   }
-  generateProjectPDF(currentProject,allFloorRooms);
+  generateProjectPDF(currentProject,allFloorRooms,opts);
 }
 
-function generateProjectPDF(project,allFloorRooms){
+function generateProjectPDF(project,allFloorRooms,opts={}){
   const{jsPDF}=window.jspdf;
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const W=210,H=297,ML=15,MR=15,MT=15,CW=180;
@@ -2300,7 +2306,7 @@ async function closeEntry(ok){
 function openExportModal(){centerModal('mw-export');setTimeout(()=>document.getElementById('exp-project').focus(),50);}
 function closeExport(ok){
   document.getElementById('mw-export').style.display='none';
-  if(!ok)return;
+  if(!ok){window._exportMode=null;return;}
   const opts={
     grundflaeche: document.getElementById('exp-grundflaeche')?.checked!==false,
     decke:        document.getElementById('exp-decke')?.checked!==false,
@@ -2313,12 +2319,19 @@ function closeExport(ok){
     dach:         document.getElementById('exp-dach')?.checked===true,
     grundriss:    document.getElementById('exp-grundriss')?.checked!==false,
   };
-  generatePDF(
-    document.getElementById('exp-project').value.trim()||'measup',
-    document.getElementById('exp-client').value.trim(),
-    document.getElementById('exp-author').value.trim(),
-    opts
-  );
+  if(window._exportMode==='project'){
+    window._exportMode=null;
+    window._exportOpts=opts;
+    _doExportProject();
+  } else {
+    window._exportMode=null;
+    generatePDF(
+      document.getElementById('exp-project').value.trim()||'measup',
+      document.getElementById('exp-client').value.trim(),
+      document.getElementById('exp-author').value.trim(),
+      opts
+    );
+  }
 }
 
 function pdfText(doc,text,x,y,maxW){
