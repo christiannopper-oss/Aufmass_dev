@@ -867,7 +867,7 @@ async function exportProject(){
         // If plan_w/h not stored yet, use a virtual 10000px frame
         const fw=fl.plan_w||10000, fh=fl.plan_h||10000;
         const fx=0, fy=0; // normalized origin is always 0 in stored form
-        pts=pts.map(p=>({x:fx+p.rx*fw, y:fy+p.ry*fh}));
+        pts=pts.map(p=>p&&typeof p.rx==='number'?({x:fx+p.rx*fw, y:fy+p.ry*fh}):null).filter(Boolean);
       }
       // Decode traufKanten
       let traufKanten=[];
@@ -932,8 +932,8 @@ function generateProjectPDF(project,allFloorRooms){
   // helper to calc room stats with a given scale
   function rStats(rm,sc,floorCtx){
     if(!sc)return{a:null,wG:null,abzSum:0,zusSum:0,wN:null};
-    function pArea(pts){let a=0,n=pts.length;for(let i=0;i<n;i++){const j=(i+1)%n;a+=pts[i].x*pts[j].y-pts[j].x*pts[i].y;}return Math.abs(a/2);}
-    function pPerim(pts){let p=0,n=pts.length;for(let i=0;i<n;i++){const j=(i+1)%n;p+=Math.hypot(pts[j].x-pts[i].x,pts[j].y-pts[i].y);}return p;}
+    function pArea(pts){let a=0,n=pts.length;for(let i=0;i<n;i++){const j=(i+1)%n;if(!pts[i]||!pts[j])continue;a+=pts[i].x*pts[j].y-pts[j].x*pts[i].y;}return Math.abs(a/2);}
+    function pPerim(pts){let p=0,n=pts.length;for(let i=0;i<n;i++){const j=(i+1)%n;if(!pts[i]||!pts[j])continue;p+=Math.hypot(pts[j].x-pts[i].x,pts[j].y-pts[i].y);}return p;}
     const a=pArea(rm.points)/(sc*sc);
     const per=pPerim(rm.points)/sc;
     let wG=per*rm.height;
@@ -3629,8 +3629,9 @@ let obCurrentStep=1;
 const OB_KEY='measup_onboarding_done';
 
 function showOnboarding(){
-  if(localStorage.getItem(OB_KEY))return; // bereits gesehen
+  if(localStorage.getItem(OB_KEY))return;
   const overlay=document.getElementById('onboarding-overlay');
+  if(!overlay)return; // Element noch nicht im DOM
   overlay.style.display='flex';
   obCurrentStep=1;
   obRender();
@@ -3676,7 +3677,8 @@ function obRender(){
 }
 // ── INIT ─────────────────────────────────────────────────
 showScreen('project');
-showOnboarding();
+document.addEventListener('DOMContentLoaded',showOnboarding);
+if(document.readyState!=='loading')showOnboarding();
 </script>
 <!-- JSON Import Modal -->
 <div id="json-import-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:600;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)">
