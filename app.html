@@ -836,17 +836,26 @@ async function _doExportProject(){
     const rawRooms=await sb.get('rooms','?floor_id=eq.'+fl.id+'&order=created_at.asc')||[];
     // Decode traufKanten and ensure points are in pixel space for rStats
     // Points from DB are normalized (rx/ry). We convert using floor's stored plan dimensions.
+    // Calculate scale from stored ref points and ref length
+    // This avoids needing plan_w/plan_h entirely
+    let normScale=null; // meters per normalized unit
+    const refPtsStored=fl.ref_pts_grundriss||fl.ref_points||[];
+    const refLenM=fl.ref_length_grundriss_m||null;
+    if(refPtsStored.length===2&&refLenM){
+      const r0=refPtsStored[0],r1=refPtsStored[1];
+      if(r0&&r1){
+        const normDist=Math.hypot(
+          (r1.rx||r1.x||0)-(r0.rx||r0.x||0),
+          (r1.ry||r1.y||0)-(r0.ry||r0.y||0)
+        );
+        if(normDist>0)normScale=refLenM/normDist;
+      }
+    }
     const fRooms=rawRooms.map(rm=>{
       let pts=(rm.points||[]);
-      // If points are normalized (have rx/ry), convert using scale
-      // We use a virtual frame: scale_px_per_m gives px/m, so we work in normalized space
-      // by treating rx/ry as pixel coords scaled by 1 (scale already accounts for this)
       if(pts.length>0 && pts[0] && typeof pts[0].rx==='number'){
-        // Convert normalized (rx/ry) to pixel coords using stored plan dimensions
-        // If plan_w/h not stored yet, use a virtual 10000px frame
-        const fw=fl.plan_w||10000, fh=fl.plan_h||10000;
-        const fx=0, fy=0; // normalized origin is always 0 in stored form
-        pts=pts.map(p=>p&&typeof p.rx==='number'?({x:fx+p.rx*fw, y:fy+p.ry*fh}):null).filter(Boolean);
+        // Use normalized coords directly — normScale converts to meters
+        pts=pts.map(p=>p&&typeof p.rx==='number'?({x:p.rx,y:p.ry}):null).filter(Boolean);
       }
       // Decode traufKanten
       let traufKanten=[];
@@ -857,7 +866,7 @@ async function _doExportProject(){
       });
       return{...rm,points:pts,traufKanten};
     });
-    allFloorRooms.push({floor:fl,rooms:fRooms});
+    allFloorRooms.push({floor:{...fl,normScale},rooms:fRooms});
   }
   generateProjectPDF(currentProject,allFloorRooms,opts);
 }
@@ -910,11 +919,14 @@ function generateProjectPDF(project,allFloorRooms,opts={}){
   function checkPage(need=12){if(y+need>H-20){doc.addPage();y=MT;}}
   // helper to calc room stats with a given scale
   function rStats(rm,sc,floorCtx){
-    if(!sc)return{a:null,wG:null,abzSum:0,zusSum:0,wN:null};
+    // Use normScale if available (gesamtexport with normalized coords)
+    const ns=floorCtx&&floorCtx.normScale;
+    const effectiveSc=ns?1:sc; // if normScale, coords are already in norm space
+    if(!ns&&!sc)return{a:null,wG:null,abzSum:0,zusSum:0,wN:null};
     function pArea(pts){let a=0,n=pts.length;for(let i=0;i<n;i++){const j=(i+1)%n;if(!pts[i]||!pts[j])continue;a+=pts[i].x*pts[j].y-pts[j].x*pts[i].y;}return Math.abs(a/2);}
     function pPerim(pts){let p=0,n=pts.length;for(let i=0;i<n;i++){const j=(i+1)%n;if(!pts[i]||!pts[j])continue;p+=Math.hypot(pts[j].x-pts[i].x,pts[j].y-pts[i].y);}return p;}
-    const a=pArea(rm.points)/(sc*sc);
-    const per=pPerim(rm.points)/sc;
+    const a=ns ? pArea(rm.points)*ns*ns : pArea(rm.points)/(sc*sc);
+    const per=ns ? pPerim(rm.points)*ns : pPerim(rm.points)/sc;
     let wG=per*rm.height;
     const abzSum=(rm.abzuege||[]).reduce((s,e)=>{const av=e.b*e.h;return s+((e.vob&&av<2.5)?0:av*e.n);},0);
     const zusSum=(rm.zusaetze||[]).reduce((s,e)=>s+e.b*e.h*e.n,0);
