@@ -2440,7 +2440,10 @@ function toggleDachOv(){
 ['m-name','m-h'].forEach(id=>document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('m-name').value.trim())closeRoom(true);}));
 document.getElementById('r-len').addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('r-len').value)closeRef(true);});
 ['e-name','e-b','e-h','e-n'].forEach(id=>document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')closeEntry(true);}));
-document.getElementById('exp-project').addEventListener('keydown',e=>{if(e.key==='Enter')closeExport(true);});
+document.addEventListener('DOMContentLoaded',()=>{
+  const ep=document.getElementById('exp-project');
+  if(ep)ep.addEventListener('keydown',e=>{if(e.key==='Enter')closeExport(true);});
+});
 document.addEventListener('keydown',e=>{
   if(e.code==='Space'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){
     spaceDown=true;cv.style.cursor='grab';e.preventDefault();return;
