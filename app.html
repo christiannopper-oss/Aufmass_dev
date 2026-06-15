@@ -1614,6 +1614,7 @@ function roomStats(rm){
 
     for(let i=0;i<n;i++){
       const va=pts[i],vb=pts[(i+1)%n];
+      if(!va||!vb)continue;
       const edgeLen=Math.hypot(vb.x-va.x,vb.y-va.y)/scale;
       const t=edgeTypes[i];
 
@@ -1650,6 +1651,7 @@ function roomStats(rm){
     let schraegeGrundProj=0;
     traufSet.forEach(ei=>{
       const va=pts[ei],vb=pts[(ei+1)%n];
+      if(!va||!vb)return;
       const edgeLen=Math.hypot(vb.x-va.x,vb.y-va.y)/scale;
       schraegeGrundProj+=edgeLen*schraegeTiefeForEdge(ei);
     });
@@ -1658,6 +1660,7 @@ function roomStats(rm){
     // ── 6. Zusammenfassung ──
     const traufLm=Array.from(traufSet).reduce((s,ei)=>{
       const va=pts[ei],vb=pts[(ei+1)%n];
+      if(!va||!vb)return s;
       return s+Math.hypot(vb.x-va.x,vb.y-va.y)/scale;
     },0);
 
