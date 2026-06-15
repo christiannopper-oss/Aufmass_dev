@@ -854,7 +854,30 @@ async function exportProject(){
   // Load all rooms for all floors
   const allFloorRooms=[];
   for(const fl of floors){
-    const fRooms=await sb.get('rooms','?floor_id=eq.'+fl.id+'&order=created_at.asc')||[];
+    const rawRooms=await sb.get('rooms','?floor_id=eq.'+fl.id+'&order=created_at.asc')||[];
+    // Decode traufKanten and ensure points are in pixel space for rStats
+    // Points from DB are normalized (rx/ry). We convert using floor's stored plan dimensions.
+    const fRooms=rawRooms.map(rm=>{
+      let pts=(rm.points||[]);
+      // If points are normalized (have rx/ry), convert using scale
+      // We use a virtual frame: scale_px_per_m gives px/m, so we work in normalized space
+      // by treating rx/ry as pixel coords scaled by 1 (scale already accounts for this)
+      if(pts.length>0 && pts[0] && typeof pts[0].rx==='number'){
+        // Convert normalized (rx/ry) to pixel coords using stored plan dimensions
+        // If plan_w/h not stored yet, use a virtual 10000px frame
+        const fw=fl.plan_w||10000, fh=fl.plan_h||10000;
+        const fx=0, fy=0; // normalized origin is always 0 in stored form
+        pts=pts.map(p=>({x:fx+p.rx*fw, y:fy+p.ry*fh}));
+      }
+      // Decode traufKanten
+      let traufKanten=[];
+      const raw=rm.trauf_kanten||[];
+      raw.forEach(item=>{
+        if(typeof item==='number'){traufKanten.push(item);}
+        else if(item&&typeof item==='object'&&'idx' in item){traufKanten.push(item.idx);}
+      });
+      return{...rm,points:pts,traufKanten};
+    });
     allFloorRooms.push({floor:fl,rooms:fRooms});
   }
   generateProjectPDF(currentProject,allFloorRooms);
@@ -1092,7 +1115,9 @@ async function saveFloorState(){
       ref_pts_schnitt:normRefSchnitt,
       img_rotation:imgRotationGrundriss,
       schnitt_rotation:imgRotationSchnitt,
-      schnitt_pts:normSchnittPts
+      schnitt_pts:normSchnittPts,
+      plan_w:imgW||null,
+      plan_h:imgH||null
     },'?id=eq.'+currentFloor.id);
     currentFloor.ref_pts_grundriss=normRefGrundriss;
     currentFloor.ref_pts_schnitt=normRefSchnitt;
@@ -2183,13 +2208,15 @@ function centerModal(id){
   const wr=wrap.getBoundingClientRect();
   const mw=document.getElementById(id);
   mw.style.display='block';
-  // For export modal: center vertically too, accounting for larger size
-  const mh=mw.offsetHeight||400;
-  const mw2=mw.offsetWidth||340;
-  const left=Math.max(10,Math.min(wr.width-mw2-10, wr.width/2-mw2/2));
-  const top=Math.max(10,Math.min(wr.height-mh-10, wr.height/2-mh/2));
-  mw.style.left=left+'px';
-  mw.style.top=top+'px';
+  // Use rAF to read dimensions after render
+  requestAnimationFrame(()=>{
+    const mh=mw.offsetHeight||400;
+    const mww=mw.offsetWidth||340;
+    const left=Math.max(10,Math.min(wr.width-mww-10, wr.width/2-mww/2));
+    const top=Math.max(10,Math.min(wr.height-mh-10, wr.height/2-mh/2));
+    mw.style.left=left+'px';
+    mw.style.top=top+'px';
+  });
 }
 function openRoomModal(){
   if(curPts.length<3)return;
