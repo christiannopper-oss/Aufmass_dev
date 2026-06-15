@@ -433,6 +433,24 @@ canvas{display:block;touch-action:none;-webkit-user-select:none;user-select:none
 const SUPABASE_URL = 'https://dfobvtluyxikloyphfwf.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmb2J2dGx1eXhpa2xveXBoZndmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1OTkzNzcsImV4cCI6MjA5MjE3NTM3N30.X9KiYJRotf9dn8UWt1_mi4kkoEjPdlj4wBkweS1xVI8';
 
+
+// ── App safety / beta settings ─────────────────────────────
+const DEBUG = false;
+const KI_ENABLED = false;
+const MAX_INLINE_PLAN_BYTES = 8 * 1024 * 1024; // Warnung ab 8 MB, da Base64 in DB/localStorage groß wird
+
+function escHtml(value){
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function escAttr(value){ return escHtml(value); }
+function showUserError(prefix, err){
+  const msg = (err && err.message) ? err.message : String(err || 'Unbekannter Fehler');
+  alert(prefix + ': ' + msg);
+}
+function sanitizeId(value){
+  return String(value ?? '').replace(/[^a-zA-Z0-9_-]/g,'');
+}
+
 // ── Auth Session ──
 const auth = {
   getToken(){ return localStorage.getItem('sb_access_token'); },
@@ -626,7 +644,8 @@ async function loadProjects(){
     renderProjects();
   }catch(e){
     console.error('loadProjects error:',e);
-    if(list)list.innerHTML='<div style="padding:24px;text-align:center;color:var(--red);font-size:13px">Verbindungsfehler: '+e.message+'</div>';
+    if(list)list.innerHTML='<div style="padding:24px;text-align:center;color:var(--red);font-size:13px">Verbindungsfehler: '+escHtml(e.message)+'</div>';
+    showUserError('Projekte konnten nicht geladen werden', e);
   }
 }
 
@@ -660,11 +679,15 @@ function renderProjects(){
   const cards=projects.map(p=>{
     const created=p.created_at?new Date(p.created_at).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
     const updated=p.updated_at&&p.updated_at!==p.created_at?new Date(p.updated_at).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
-    return `<div class="project-card" onclick="openProject('${p.id}')">
+    const id=escAttr(p.id);
+    const name=escHtml(p.name||'Unbenanntes Projekt');
+    const client=escHtml(p.client||'');
+    const author=escHtml(p.author||'');
+    return `<div class="project-card" onclick="openProject('${id}')">
       <div class="project-card-badge">Projekt</div>
-      <div class="project-card-name">${p.name}</div>
-      ${p.client?`<div class="project-card-client">Auftraggeber: ${p.client}</div>`:''}
-      ${p.author?`<div class="project-card-client">Von: ${p.author}</div>`:''}
+      <div class="project-card-name">${name}</div>
+      ${client?`<div class="project-card-client">Auftraggeber: ${client}</div>`:''}
+      ${author?`<div class="project-card-client">Von: ${author}</div>`:''}
       <div class="project-card-dates">${created?'Erstellt: '+created+'<br>':''}${updated?'Geändert: '+updated:''}</div>
     </div>`;}).join('');
   list.innerHTML=cards||'<div id="project-empty" class="empty-state">Noch keine Projekte.<br>Tippe auf „+ Neues Projekt".</div>';
@@ -685,25 +708,39 @@ async function deleteCurrentProject(){
 // ── FLOORS ─────────────────────────────────────────────────
 async function loadFloors(){
   if(!currentProject)return;
-  floors=await sb.get('floors','?project_id=eq.'+currentProject.id+'&order=sort_order.asc')||[];
-  renderFloors();
+  const list=document.getElementById('floor-list');
+  if(list)list.innerHTML='<div style="padding:24px;text-align:center;color:var(--txt3);font-size:13px">Laden …</div>';
+  try{
+    floors=await sb.get('floors','?project_id=eq.'+currentProject.id+'&order=sort_order.asc')||[];
+    renderFloors();
+  }catch(e){
+    console.error('loadFloors error:',e);
+    if(list)list.innerHTML='<div style="padding:24px;text-align:center;color:var(--red);font-size:13px">Geschosse konnten nicht geladen werden: '+escHtml(e.message)+'</div>';
+    showUserError('Geschosse konnten nicht geladen werden', e);
+  }
 }
 
 function renderFloors(){
   const list=document.getElementById('floor-list');
   const expBtn=document.getElementById('btn-project-export');
-  if(expBtn)expBtn.style.display=floors.length>0?'':' none';
+  if(expBtn)expBtn.style.display=floors.length>0?'':'none';
   if(!floors.length){list.innerHTML='<div class="empty-state">Noch keine Geschosse.<br>Tippe auf „+ Geschoss hinzufügen".</div>';return;}
-  list.innerHTML=floors.map((f,i)=>`
-    <div class="floor-card" onclick="openFloor('${f.id}')">
+  list.innerHTML=floors.map((f,i)=>{
+    const id=escAttr(f.id);
+    const name=escHtml(f.name||'Unbenanntes Geschoss');
+    const dachInfo=(f.dach_config&&f.dach_config.aktiv)
+      ? ` · 🏠 Dach: Kniestock ${Number(f.dach_config.kniestockH||0).toFixed(2)}m / First ${Number(f.dach_config.firstH||0).toFixed(2)}m`
+      : '';
+    return `<div class="floor-card" onclick="openFloor('${id}')">
       <div>
-        <div class="floor-card-name">${f.name}</div>
-        <div class="floor-card-meta">${f.scale_px_per_m?'Kalibriert ✓':'Nicht kalibriert'}${f.dach_config&&f.dach_config.aktiv?` · 🏠 Dach: Kniestock ${f.dach_config.kniestockH}m / First ${f.dach_config.firstH}m`:''}</div>
+        <div class="floor-card-name">${name}</div>
+        <div class="floor-card-meta">${f.scale_px_per_m?'Kalibriert ✓':'Nicht kalibriert'}${dachInfo}</div>
       </div>
       <div class="floor-card-right">
-        <span class="floor-del" onclick="deleteFloor('${f.id}');event.stopPropagation()">✕</span>
+        <span class="floor-del" onclick="deleteFloor('${id}');event.stopPropagation()">✕</span>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 async function openFloor(id){
@@ -1018,6 +1055,7 @@ function generateProjectPDF(project,allFloorRooms,opts={}){
 }
 
 // ── OVERLAY (project/floor create) ────────────────────────
+function ovInput(name){ return document.querySelector(`#overlay-body [data-ov="${name}"]`); }
 function openOverlay(mode){
   overlayMode=mode;
   const overlay=document.getElementById('overlay');
@@ -1027,60 +1065,65 @@ function openOverlay(mode){
   if(mode==='project'){
     title.textContent='Neues Projekt';
     body.innerHTML=`
-      <label>PROJEKTNAME *</label><input id="ov-name" placeholder="z.B. EFH Familie Müller">
-      <label>AUFTRAGGEBER</label><input id="ov-client" placeholder="optional">
-      <label>ERSTELLT VON</label><input id="ov-author" placeholder="optional">`;
+      <label for="ov-project-name">PROJEKTNAME *</label><input id="ov-project-name" data-ov="name" placeholder="z.B. EFH Familie Müller">
+      <label for="ov-project-client">AUFTRAGGEBER</label><input id="ov-project-client" data-ov="client" placeholder="optional">
+      <label for="ov-project-author">ERSTELLT VON</label><input id="ov-project-author" data-ov="author" placeholder="optional">`;
     ok.textContent='Erstellen';
   } else if(mode==='project-edit'){
     title.textContent='Projekt bearbeiten';
     body.innerHTML=`
-      <label>PROJEKTNAME *</label><input id="ov-name" value="${currentProject.name}">
-      <label>AUFTRAGGEBER</label><input id="ov-client" value="${currentProject.client||''}">
-      <label>ERSTELLT VON</label><input id="ov-author" value="${currentProject.author||''}">`;
+      <label for="ov-project-edit-name">PROJEKTNAME *</label><input id="ov-project-edit-name" data-ov="name" value="${escAttr(currentProject.name)}">
+      <label for="ov-project-edit-client">AUFTRAGGEBER</label><input id="ov-project-edit-client" data-ov="client" value="${escAttr(currentProject.client||'')}">
+      <label for="ov-project-edit-author">ERSTELLT VON</label><input id="ov-project-edit-author" data-ov="author" value="${escAttr(currentProject.author||'')}">`;
     ok.textContent='Speichern';
   } else if(mode==='floor'){
     title.textContent='Neues Geschoss';
     body.innerHTML=`
-      <label>BEZEICHNUNG *</label><input id="ov-name" placeholder="z.B. Erdgeschoss, Dachgeschoss">
-      <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer" for="ov-dach">
-        <input type="checkbox" id="ov-dach" onchange="document.getElementById('ov-height-row').style.display=this.checked?'none':'';" style="width:auto;margin:0;accent-color:var(--gold)">
+      <label for="ov-floor-name">BEZEICHNUNG *</label><input id="ov-floor-name" data-ov="name" placeholder="z.B. Erdgeschoss, Dachgeschoss">
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer" for="ov-floor-dach">
+        <input type="checkbox" id="ov-floor-dach" data-ov="dach" onchange="document.getElementById('ov-floor-height-row').style.display=this.checked?'none':'';" style="width:auto;margin:0;accent-color:var(--gold)">
         <span style="font-size:11px;color:var(--txt2)">Dieses Geschoss hat Dachschrägen</span>
       </label>
-      <div id="ov-height-row">
-        <label>STANDARD-RAUMHÖHE (m)</label><input id="ov-height" type="number" value="2.50" step="0.01" min="1" max="10" placeholder="2.50">
+      <div id="ov-floor-height-row">
+        <label for="ov-floor-height">STANDARD-RAUMHÖHE (m)</label><input id="ov-floor-height" data-ov="height" type="number" value="2.50" step="0.01" min="1" max="10" placeholder="2.50">
       </div>`;
     ok.textContent='Erstellen';
   }
   overlay.style.display='flex';
-  setTimeout(()=>document.getElementById('ov-name')?.focus(),50);
+  setTimeout(()=>ovInput('name')?.focus(),50);
 }
 
 function closeOverlay(){document.getElementById('overlay').style.display='none';}
 
 async function overlayConfirm(){
-  const name=document.getElementById('ov-name')?.value.trim();
+  const name=ovInput('name')?.value.trim();
   if(!name)return;
-  if(overlayMode==='project'){
-    const client=document.getElementById('ov-client')?.value.trim();
-    const author=document.getElementById('ov-author')?.value.trim();
-    const res=await sb.post('projects',{name,client,author,user_id:auth.getUserId()});
-    if(res&&res[0]){projects.unshift(res[0]);renderProjects();}
-  } else if(overlayMode==='project-edit'){
-    const client=document.getElementById('ov-client')?.value.trim();
-    const author=document.getElementById('ov-author')?.value.trim();
-    await sb.patch('projects',{name,client,author},'?id=eq.'+currentProject.id);
-    currentProject={...currentProject,name,client,author};
-    document.getElementById('floor-project-name').textContent=name;
-    loadProjects();
-  } else if(overlayMode==='floor'){
-    const dachCb=document.getElementById('ov-dach');
-    const hasDach=dachCb&&dachCb.checked;
-    const dachData=hasDach?{aktiv:true}:null;
-    const defaultHeight=parseFloat(document.getElementById('ov-height')?.value)||2.5;
-    const res=await sb.post('floors',{project_id:currentProject.id,name,sort_order:floors.length,dach_config:dachData,default_height:defaultHeight,user_id:auth.getUserId()});
-    if(res&&res[0]){floors.push(res[0]);renderFloors();}
+  try{
+    if(overlayMode==='project'){
+      const client=ovInput('client')?.value.trim();
+      const author=ovInput('author')?.value.trim();
+      const res=await sb.post('projects',{name,client,author,user_id:auth.getUserId()});
+      if(res&&res[0]){projects.unshift(res[0]);renderProjects();}
+    } else if(overlayMode==='project-edit'){
+      const client=ovInput('client')?.value.trim();
+      const author=ovInput('author')?.value.trim();
+      await sb.patch('projects',{name,client,author},'?id=eq.'+currentProject.id);
+      currentProject={...currentProject,name,client,author};
+      document.getElementById('floor-project-name').textContent=name;
+      loadProjects();
+    } else if(overlayMode==='floor'){
+      const dachCb=ovInput('dach');
+      const hasDach=dachCb&&dachCb.checked;
+      const dachData=hasDach?{aktiv:true}:null;
+      const defaultHeight=parseFloat(ovInput('height')?.value)||2.5;
+      const res=await sb.post('floors',{project_id:currentProject.id,name,sort_order:floors.length,dach_config:dachData,default_height:defaultHeight,user_id:auth.getUserId()});
+      if(res&&res[0]){floors.push(res[0]);renderFloors();}
+    }
+    closeOverlay();
+  }catch(e){
+    console.error('overlayConfirm error:',e);
+    showUserError('Speichern fehlgeschlagen', e);
   }
-  closeOverlay();
 }
 
 // ── SAVE TO SUPABASE ───────────────────────────────────────
@@ -1248,9 +1291,15 @@ function syncDebugState(){
   };
   const dbg=document.getElementById('st-debug');
   if(dbg){
-    const g = refLengthGrundrissM===null?'NULL':refLengthGrundrissM;
-    const s = refLengthSchnittM===null?'NULL':refLengthSchnittM;
-    dbg.textContent = 'GR=' + g + 'm | SC=' + s + 'm';
+    if(DEBUG){
+      const g = refLengthGrundrissM===null?'NULL':refLengthGrundrissM;
+      const s = refLengthSchnittM===null?'NULL':refLengthSchnittM;
+      dbg.textContent = 'GR=' + g + 'm | SC=' + s + 'm';
+      dbg.style.display='';
+    }else{
+      dbg.textContent='';
+      dbg.style.display='none';
+    }
   }
 }
 
@@ -2056,8 +2105,8 @@ function updSidebar(){
 
   const roomHtml = rooms.map((rm,i)=>{
     const sel=selRoom===i;
-    const abzHtml=(rm.abzuege||[]).map((e,ei)=>`<div class="entry-item"><span>↓ ${e.name} ${e.b.toFixed(2)}×${e.h.toFixed(2)} ×${e.n}${e.vob?' VOB':''}</span><span class="ev" style="color:#c0392b">-${calcAbzug(e).toFixed(2)} m²</span><span class="entry-del" onclick="delEntry(${i},'abzuege',${ei});event.stopPropagation()">✕</span></div>`).join('');
-    const zusHtml=(rm.zusaetze||[]).map((e,ei)=>`<div class="entry-item"><span>↑ ${e.name} ${e.b.toFixed(2)}×${e.h.toFixed(2)} ×${e.n}</span><span class="ev" style="color:#a8e6cf">+${calcZusatz(e).toFixed(2)} m²</span><span class="entry-del" onclick="delEntry(${i},'zusaetze',${ei});event.stopPropagation()">✕</span></div>`).join('');
+    const abzHtml=(rm.abzuege||[]).map((e,ei)=>`<div class="entry-item"><span>↓ ${escHtml(e.name)} ${e.b.toFixed(2)}×${e.h.toFixed(2)} ×${e.n}${e.vob?' VOB':''}</span><span class="ev" style="color:#c0392b">-${calcAbzug(e).toFixed(2)} m²</span><span class="entry-del" onclick="delEntry(${i},'abzuege',${ei});event.stopPropagation()">✕</span></div>`).join('');
+    const zusHtml=(rm.zusaetze||[]).map((e,ei)=>`<div class="entry-item"><span>↑ ${escHtml(e.name)} ${e.b.toFixed(2)}×${e.h.toFixed(2)} ×${e.n}</span><span class="ev" style="color:#a8e6cf">+${calcZusatz(e).toFixed(2)} m²</span><span class="entry-del" onclick="delEntry(${i},'zusaetze',${ei});event.stopPropagation()">✕</span></div>`).join('');
     const{a,wG,abzSum,zusSum,wN,sockel,acrylWD,acrylWW,innenecken,dachStats}=roomStats(rm);
     const lmSection=a!==null?('<br><span style="color:#555;font-size:9px">── Laufende Meter ──</span>'
       +'<br>Sockelleisten: <b>'+(sockel!==null?sockel.toFixed(2):'?')+' m</b>'
@@ -2094,7 +2143,7 @@ function updSidebar(){
       ?`<span style="font-size:10px;color:var(--txt3)">${a.toFixed(2)} m² &nbsp;·&nbsp; <span style="color:var(--blue)">${wN!==null?wN.toFixed(2):'?'} m² netto</span></span>`
       :`<span style="font-size:10px;color:var(--txt3);opacity:.6">Kalibrierung fehlt</span>`;
     return`<div class="rc${sel?' sel':''}" onclick="selR(${i})">
-      <div class="rn"><span>${rm.name}</span><div style="display:flex;gap:4px">
+      <div class="rn"><span>${escHtml(rm.name)}</span><div style="display:flex;gap:4px">
         <button class="edit-btn" title="Punkte bearbeiten" onclick="activateSelectForRoom(${i});event.stopPropagation()">⊹</button>
         <button class="edit-btn" onclick="openEditRoom(${i});event.stopPropagation()">✎</button>
         <button class="edit-btn" style="border-color:#c0392b33;color:#c0392b" onclick="delRoomByIdx(${i});event.stopPropagation()">✕</button>
@@ -2725,12 +2774,25 @@ let lastTouchEnd=0;
 cv.addEventListener('pointerup',e=>{if(e.pointerType!=='mouse')lastTouchEnd=Date.now();},{passive:true,capture:true});
 
 // ── PDF LOAD ──────────────────────────────────────────────
-function handleDrop(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf')loadPDF(f);}
+function handleDrop(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f)loadFileObject(f);}
 function loadFile(inp){
   if(!inp.files[0])return;
   // ensure we load into the correct view
-  loadPDF(inp.files[0]);
+  loadFileObject(inp.files[0]);
   inp.value=''; // reset so same file can be reloaded
+}
+function loadFileObject(file){
+  if(!file)return;
+  if(file.size > MAX_INLINE_PLAN_BYTES){
+    const mb=(file.size/1024/1024).toFixed(1);
+    const ok=confirm('Die Datei ist '+mb+' MB groß. Diese Version speichert Pläne noch direkt in der Datenbank/localStorage. Das kann langsam werden oder beim Speichern Probleme machen. Trotzdem laden?');
+    if(!ok)return;
+  }
+  if(file.type==='application/pdf' || file.type.startsWith('image/')){
+    loadPDF(file);
+  }else{
+    alert('Bitte eine PDF- oder Bilddatei laden.');
+  }
 }
 async function loadPageImage(pageNum){
   if(pageImages[pageNum])return pageImages[pageNum];
@@ -3204,6 +3266,7 @@ function saveApiKey(){
 }
 
 function startKIAnalyse(){
+  if(!KI_ENABLED){ alert('Die KI-Funktion ist in dieser Beta-Version deaktiviert.'); return; }
   if(!img&&!schnittImg){alert('Bitte zuerst einen Plan laden.');return;}
   const key=getApiKey();
   if(!key){
