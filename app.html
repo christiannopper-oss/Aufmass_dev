@@ -1271,7 +1271,9 @@ function renderMag(wx,wy){
 
 // ── DRAGGABLE MODALS ───────────────────────────────────────
 function mkDrag(hId,wId){const h=document.getElementById(hId),w=document.getElementById(wId);let dn=false,mx=0,my=0;h.addEventListener('mousedown',e=>{dn=true;mx=e.clientX;my=e.clientY;e.preventDefault();});document.addEventListener('mousemove',e=>{if(!dn)return;const wr=wrap.getBoundingClientRect();let nx=parseFloat(w.style.left||0)+(e.clientX-mx),ny=parseFloat(w.style.top||0)+(e.clientY-my);nx=Math.max(0,Math.min(wr.width-w.offsetWidth,nx));ny=Math.max(0,Math.min(wr.height-w.offsetHeight,ny));w.style.left=nx+'px';w.style.top=ny+'px';mx=e.clientX;my=e.clientY;});document.addEventListener('mouseup',()=>dn=false);}
-['room','ref','entry','export'].forEach(id=>mkDrag('md-'+id,'mw-'+id));
+['room','ref','entry'].forEach(id=>mkDrag('md-'+id,'mw-'+id));
+document.addEventListener('DOMContentLoaded',()=>mkDrag('md-export','mw-export'));
+if(document.readyState!=='loading')mkDrag('md-export','mw-export');
 
 function resize(){
   const r=wrap.getBoundingClientRect();
