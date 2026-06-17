@@ -817,6 +817,14 @@ async function openFloor(id){
   const _grpD=document.getElementById('grp-dach');if(_grpD)_grpD.style.display=_isDach?'flex':'none';
   const _sepD=document.getElementById('sep-dach');if(_sepD)_sepD.style.display=_isDach?'':'none';
   updPageNav();updStatus();updSidebar();syncDebugState();draw();updToolbarLockState();
+  // Raum-Werkzeuge beim Geschoss-Öffnen korrekt setzen (setView wird nicht aufgerufen)
+  const _grpRaum=document.getElementById('grp-raum');
+  const _sepRaum=document.getElementById('sep-raum');
+  const _lblRaum=document.getElementById('lbl-raum');
+  const _showRaum=viewMode!=='schnitt';
+  if(_grpRaum)_grpRaum.style.display=_showRaum?'flex':'none';
+  if(_sepRaum)_sepRaum.style.display=_showRaum?'':'none';
+  if(_lblRaum)_lblRaum.style.display=_showRaum?'':'none';
 }
 
 async function deleteFloor(id){
