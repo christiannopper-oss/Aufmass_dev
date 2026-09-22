@@ -849,35 +849,51 @@ async function _doExportProject(){
     // Points from DB are normalized (rx/ry). We convert using floor's stored plan dimensions.
     // Calculate scale from stored ref points and ref length
     // This avoids needing plan_w/plan_h entirely
-    let normScale=null; // meters per normalized unit
+    // Gespeicherte Punkte sind normalisiert: rx auf die Planbreite, ry auf die
+    // Planhoehe bezogen. Beide Achsen haben damit unterschiedliche Massstaebe.
+    // Vor jeder Laengen-/Flaechenrechnung muss ry deshalb mit dem Seitenverhaeltnis
+    // des Plans entzerrt werden - sonst sind alle Werte um genau dieses Verhaeltnis
+    // verfaelscht. Ergebnis unten: Punkte in Metern, Massstab 1 px/m.
+    const aspect=(fl.plan_w>0&&fl.plan_h>0)?(fl.plan_h/fl.plan_w):null;
+    const toIso=p=>({x:p.rx,y:p.ry*aspect});
+    let mPerUnit=null; // Meter pro entzerrter Einheit
     const refPtsStored=fl.ref_pts_grundriss||fl.ref_points||[];
     const refLenM=fl.ref_length_grundriss_m||null;
-    if(refPtsStored.length===2&&refLenM){
+    if(aspect&&refLenM&&refPtsStored.length===2){
       const r0=refPtsStored[0],r1=refPtsStored[1];
-      if(r0&&r1){
-        const normDist=Math.hypot(
-          (r1.rx||r1.x||0)-(r0.rx||r0.x||0),
-          (r1.ry||r1.y||0)-(r0.ry||r0.y||0)
-        );
-        if(normDist>0)normScale=refLenM/normDist;
+      if(r0&&r1&&typeof r0.rx==='number'&&typeof r1.rx==='number'){
+        const a=toIso(r0),b=toIso(r1);
+        const d=Math.hypot(b.x-a.x,b.y-a.y);
+        if(d>0)mPerUnit=refLenM/d;
       }
     }
+    let metricScale=null; // px pro Meter fuer die PDF-Auswertung
     const fRooms=rawRooms.map(rm=>{
       let pts=(rm.points||[]);
-      if(pts.length>0 && pts[0] && typeof pts[0].rx==='number'){
-        // Use normalized coords directly — normScale converts to meters
-        pts=pts.map(p=>p&&typeof p.rx==='number'?({x:p.rx,y:p.ry}):null).filter(Boolean);
+      const isNorm=pts.length>0&&pts[0]&&typeof pts[0].rx==='number';
+      if(isNorm){
+        if(mPerUnit){
+          pts=pts.map(p=>{const q=toIso(p);return{x:q.x*mPerUnit,y:q.y*mPerUnit};});
+          metricScale=1; // Punkte liegen jetzt in Metern
+        } else {
+          pts=[]; // ohne Seitenverhaeltnis/Referenz nicht umrechenbar
+        }
+      } else if(fl.scale_px_per_m){
+        metricScale=fl.scale_px_per_m; // Altbestand in Pixelkoordinaten
       }
-      // Decode traufKanten
-      let traufKanten=[];
+      // trauf_kanten sind als [{idx,side}] kodiert - idx und Traufseite trennen
+      let traufKanten=[],traufSeiten={};
       const raw=rm.trauf_kanten||[];
       raw.forEach(item=>{
         if(typeof item==='number'){traufKanten.push(item);}
-        else if(item&&typeof item==='object'&&'idx' in item){traufKanten.push(item.idx);}
+        else if(item&&typeof item==='object'&&'idx' in item){
+          traufKanten.push(item.idx);
+          if(item.side)traufSeiten[item.idx]=item.side;
+        }
       });
-      return{...rm,points:pts,traufKanten};
+      return{...rm,points:pts,traufKanten,traufSeiten};
     });
-    allFloorRooms.push({floor:{...fl,normScale},rooms:fRooms});
+    allFloorRooms.push({floor:{...fl,scale_px_per_m:metricScale,scale_schnitt:metricScale},rooms:fRooms});
   }
   generateProjectPDF(currentProject,allFloorRooms,opts);
 }
@@ -930,33 +946,35 @@ function generateProjectPDF(project,allFloorRooms,opts={}){
   function checkPage(need=12){if(y+need>H-20){doc.addPage();y=MT;}}
   // helper to calc room stats with a given scale
   function rStats(rm,sc,floorCtx){
-    // Use normScale if available (gesamtexport with normalized coords)
-    const ns=floorCtx&&floorCtx.normScale;
-    const effectiveSc=ns?1:sc; // if normScale, coords are already in norm space
-    if(!ns&&!sc)return{a:null,wG:null,abzSum:0,zusSum:0,wN:null};
+    // sc ist px pro Meter; _doExportProject liefert Punkte bereits in Metern (sc=1).
+    if(!sc||!rm.points||rm.points.length<3)return{a:null,wG:null,abzSum:0,zusSum:0,wN:null,ds:null};
     function pArea(pts){let a=0,n=pts.length;for(let i=0;i<n;i++){const j=(i+1)%n;if(!pts[i]||!pts[j])continue;a+=pts[i].x*pts[j].y-pts[j].x*pts[i].y;}return Math.abs(a/2);}
     function pPerim(pts){let p=0,n=pts.length;for(let i=0;i<n;i++){const j=(i+1)%n;if(!pts[i]||!pts[j])continue;p+=Math.hypot(pts[j].x-pts[i].x,pts[j].y-pts[i].y);}return p;}
-    const a=ns ? pArea(rm.points)*ns*ns : pArea(rm.points)/(sc*sc);
-    const per=ns ? pPerim(rm.points)*ns : pPerim(rm.points)/sc;
+    const a=pArea(rm.points)/(sc*sc);
+    const per=pPerim(rm.points)/sc;
     let wG=per*rm.height;
     const abzSum=(rm.abzuege||[]).reduce((s,e)=>{const av=e.b*e.h;return s+((e.vob&&av<2.5)?0:av*e.n);},0);
     const zusSum=(rm.zusaetze||[]).reduce((s,e)=>s+e.b*e.h*e.n,0);
-    let deckeFlat=a, slope=0, deckeGes=a;
+    let deckeFlat=a, slope=0, deckeGes=a, ds=null;
     const fl=floorCtx||window._currentFloorCtx||{};
     if(fl.dach_config&&fl.dach_config.aktiv){
-      const rmLocal={...rm,traufKanten:rm.trauf_kanten||rm.traufKanten||[]};
+      // traufKanten/traufSeiten sind in _doExportProject bereits dekodiert;
+      // rm.trauf_kanten enthaelt noch die rohen {idx,side}-Objekte und darf hier
+      // nicht verwendet werden, sonst greift keine Traufkante.
+      const rmLocal={...rm,traufKanten:rm.traufKanten||[],traufSeiten:rm.traufSeiten||{}};
       const prevFloor=currentFloor, prevScale=scale, prevScaleG=scaleGrundriss, prevScaleS=scaleSchnitt;
-      currentFloor=fl; scale=sc; scaleGrundriss=fl.scale_px_per_m||sc; scaleSchnitt=fl.scale_schnitt||null;
+      currentFloor=fl; scale=sc; scaleGrundriss=sc; scaleSchnitt=fl.scale_schnitt||sc;
       const full=roomStats(rmLocal);
       currentFloor=prevFloor; scale=prevScale; scaleGrundriss=prevScaleG; scaleSchnitt=prevScaleS;
       if(full.dachStats){
+        ds=full.dachStats;
         deckeFlat=full.dachStats.deckeFlach;
         slope=full.dachStats.schraegeFlaeche;
         deckeGes=full.dachStats.deckeGesamt;
         wG=full.dachStats.wandDachBrutto||full.wG||wG;
       }
     }
-    return{a,wG,abzSum,zusSum,wN:Math.max(0,wG-abzSum)+zusSum,deckeFlat,slope,deckeGes};
+    return{a,wG,abzSum,zusSum,wN:Math.max(0,wG-abzSum)+zusSum,deckeFlat,slope,deckeGes,ds};
   }
   let grandWG=0,grandWN=0,grandCeil=0;
   allFloorRooms.forEach(({floor:fl,rooms:fRooms})=>{
@@ -970,7 +988,7 @@ function generateProjectPDF(project,allFloorRooms,opts={}){
     const sc=fl.scale_px_per_m||null;
     let flWG=0,flWN=0,flCeil=0,flCeilFlat=0,flSlope=0;
     fRooms.forEach((rm,idx)=>{
-      const{a,wG,abzSum,zusSum,wN,deckeFlat,slope,deckeGes}=rStats(rm,sc,fl);
+      const{a,wG,abzSum,zusSum,wN,deckeFlat,slope,deckeGes,ds}=rStats(rm,sc,fl);
       checkPage(14);
       const rowColor=idx%2===0?[248,246,242]:[255,255,255];
       doc.setFillColor(...rowColor);doc.rect(ML,y,CW,10,'F');
@@ -991,7 +1009,7 @@ function generateProjectPDF(project,allFloorRooms,opts={}){
       // detail rows
       checkPage(6);doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(130,120,100);
       doc.setFillColor(...rowColor);doc.rect(ML,y,CW,5.5,'F');
-      pdfText(doc,'  Raumhöhe: '+rm.height.toFixed(2)+' m',ML+2,y+4,CW-4);y+=6;
+      pdfText(doc,'  Raumhöhe: '+raumHoeheLabel(rm,ds),ML+2,y+4,CW-4);y+=6;
       if(a!==null && (slope>0 || deckeFlat!==a)){checkPage(6);doc.setFillColor(...rowColor);doc.rect(ML,y,CW,5.5,'F');doc.setTextColor(120,100,60);doc.text('  Decke flach: '+deckeFlat.toFixed(2)+' m² · Schräge: '+slope.toFixed(2)+' m² · Decke gesamt: '+deckeGes.toFixed(2)+' m²',ML+2,y+4);y+=6;}
       (rm.abzuege||[]).forEach(e=>{checkPage(6);const eff=(e.vob&&e.b*e.h<2.5)?0:e.b*e.h*e.n;doc.setFillColor(...rowColor);doc.rect(ML,y,CW,5.5,'F');doc.setTextColor(160,60,60);doc.text('  − '+e.name+': '+e.b.toFixed(2)+'×'+e.h.toFixed(2)+' m × '+e.n+(e.vob?' (VOB)':''+(eff===0?' → nicht abgezogen':'')),ML+2,y+4);if(eff>0)doc.text('-'+eff.toFixed(2)+' m²',ML+145,y+4);y+=6;});
       (rm.zusaetze||[]).forEach(e=>{checkPage(6);doc.setFillColor(...rowColor);doc.rect(ML,y,CW,5.5,'F');doc.setTextColor(40,120,80);doc.text('  + '+e.name+': '+e.b.toFixed(2)+'×'+e.h.toFixed(2)+' m × '+e.n,ML+2,y+4);doc.text('+'+(e.b*e.h*e.n).toFixed(2)+' m²',ML+145,y+4);y+=6;});
@@ -1347,6 +1365,14 @@ function polyPerim(pts){let p=0,n=pts.length;for(let i=0;i<n;i++){const j=(i+1)%
 function ptInPoly(px,py,pts){let ins=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){if(((pts[i].y>py)!==(pts[j].y>py))&&(px<(pts[j].x-pts[i].x)*(py-pts[i].y)/(pts[j].y-pts[i].y)+pts[i].x))ins=!ins;}return ins;}
 function calcAbzug(e){const a=e.b*e.h;return(e.vob&&a<2.5)?0:a*e.n;}
 function calcZusatz(e){return e.b*e.h*e.n;}
+// Beschriftung der Raumhoehe. Im Dachgeschoss ist rm.height nur der ausgeblendete
+// Geschoss-Default - gerechnet wird mit Kniestock und First aus dem Schnitt, also
+// muss die Anzeige das auch sagen statt eine einzelne, falsche Zahl zu nennen.
+function raumHoeheLabel(rm,ds){
+  if(!ds||!Number.isFinite(ds.knieH)||!Number.isFinite(ds.normH))return rm.height.toFixed(2)+' m';
+  const oben=(Number.isFinite(ds.firstH)&&Math.abs(ds.normH-ds.firstH)>0.005)?'Decke':'First';
+  return 'Kniestock '+ds.knieH.toFixed(2)+' m · '+oben+' '+ds.normH.toFixed(2)+' m';
+}
 function calcInnenecken(pts){
   let count=0;
   const n=pts.length;
@@ -1517,8 +1543,6 @@ function roomStats(rm){
   let dachStats=null;
   const dc=currentFloor&&currentFloor.dach_config&&currentFloor.dach_config.aktiv?currentFloor.dach_config:null;
   if(dc&&scale){
-    const scaleS=scaleSchnitt||scaleGrundriss||scale;
-
     // ── 1. Dachgeometrie aus Schnitt-Punkten ──
     let knieH=dc.kniestockH||1.2;
     let firstH=dc.firstH||2.8;
@@ -1528,21 +1552,20 @@ function roomStats(rm){
     const neigRadRight=(dc.neigungRight||dc.neigung||38)*Math.PI/180;
     let normH=2.5; // normale Raumhöhe (abgehängte Decke / Drempelhöhe)
 
-    const sp=dc.schnittPts;
-    const spAbsolute = Array.isArray(sp) && sp.length>=5 && sp.every(p => typeof p?.x==='number' && typeof p?.y==='number');
-    if(spAbsolute&&scaleS){
-      const geo=getSchnittGeometry(sp,scaleS,dc);
-      if(geo){
-        knieH=geo.kniestockH;
-        firstH=geo.firstH;
-        if(Number.isFinite(geo.neigung))neigRad=geo.neigung*Math.PI/180;
-        normH=geo.deckeH>0?geo.deckeH:firstH;
-      }
-    }
+    // Deckenhoehe aus dem Schnitt: bei Kehlbalken die flache Decke, sonst der First.
+    // Quelle sind die Skalarwerte in dach_config (von confirmSchnitt gesetzt, per
+    // updSchnittParam nachjustierbar). dach_config.schnittPts liegen normalisiert
+    // als {rx,ry} vor und taugen hier nicht - genau daran scheiterte die frueher
+    // hier stehende Auswertung stillschweigend, sodass normH immer 2.5 blieb.
+    if(Number.isFinite(dc.deckeH)&&dc.deckeH>0)normH=dc.deckeH;
+    else if(Number.isFinite(dc.firstH)&&dc.firstH>0)normH=dc.firstH;
 
     // ── 2. Abgeleitete Maße ──
     // Für Wandflächen zählt die tatsächliche Raumhöhe dieses Raums.
-    const raumH = rm.height||normH;
+    // Im Dachgeschoss ist das Raumhoehen-Feld ausgeblendet, rm.height traegt dort
+    // nur den Geschoss-Default. Massgeblich ist die Hoehe aus dem Schnitt - sonst
+    // rechnen Giebel/Wand mit 2.50 m, waehrend die Decke bis zum First laeuft.
+    const raumH = normH||rm.height;
     const wandHoeheUeberKnie = Math.max(0, raumH-knieH);
     // wandSchraegeTiefe berechnet weiter unten als Durchschnitt L+R
 
@@ -2111,7 +2134,7 @@ function updSidebar(){
         <button class="edit-btn" style="border-color:#c0392b33;color:#c0392b" onclick="delRoomByIdx(${i});event.stopPropagation()">✕</button>
       </div></div>
       ${!sel?`<div style="margin-top:2px">${preview}</div>`:`
-      <div class="rs" style="margin-top:6px">Höhe: <b>${rm.height.toFixed(2)} m</b><br>${mainStats}</div>
+      <div class="rs" style="margin-top:6px">Höhe: <b>${raumHoeheLabel(rm,dachStats)}</b><br>${mainStats}</div>
       <div class="entry-list">${abzHtml}${zusHtml}</div>
       <div class="add-row">
         <button onclick="openEntry(${i},'abzug');event.stopPropagation()">− Abzug</button>
@@ -2415,7 +2438,7 @@ async function generatePDF(project,client,author,opts={}) {
       if(opts.wandNetto!==false){doc.setFont('helvetica','bold');doc.setTextColor(23,99,177);doc.text(wN.toFixed(2)+' m²',colX.wandN,y+6.5);}
     }else{doc.setTextColor(160,160,160);doc.text('Kalibrierung fehlt',colX.grundfl,y+6.5);}
     doc.setDrawColor(220,218,212);doc.line(ML,y+10,ML+CW,y+10);y+=11;
-    if(opts.raumhoehe!==false){checkPage(6);doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(130,120,100);doc.setFillColor(...rowColor);doc.rect(ML,y,CW,5.5,'F');doc.text('  Raumhöhe: '+rm.height.toFixed(2)+' m',ML+2,y+4);y+=6;}
+    if(opts.raumhoehe!==false){checkPage(6);doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(130,120,100);doc.setFillColor(...rowColor);doc.rect(ML,y,CW,5.5,'F');doc.text('  Raumhöhe: '+raumHoeheLabel(rm,dachStats),ML+2,y+4);y+=6;}
     if(dachStats&&opts.dach){checkPage(6);doc.setFillColor(...rowColor);doc.rect(ML,y,CW,5.5,'F');doc.setTextColor(120,100,60);doc.text('  Decke flach: '+dachStats.deckeFlach.toFixed(2)+' m² · Schräge: '+dachStats.schraegeFlaeche.toFixed(2)+' m² · Decke gesamt: '+dachStats.deckeGesamt.toFixed(2)+' m²',ML+2,y+4);y+=6;}
     if(opts.abzuege!==false)(rm.abzuege||[]).forEach(e=>{checkPage(6);const eff=calcAbzug(e);doc.setFillColor(...rowColor);doc.rect(ML,y,CW,5.5,'F');doc.setTextColor(160,60,60);doc.text('  − '+e.name+': '+e.b.toFixed(2)+'×'+e.h.toFixed(2)+' m × '+e.n+(e.vob?' (VOB)':'')+(eff===0?' → nicht abgezogen':''),ML+2,y+4);if(eff>0)doc.text('-'+eff.toFixed(2)+' m²',colX.delta,y+4);y+=6;});
     if(opts.abzuege!==false)(rm.zusaetze||[]).forEach(e=>{checkPage(6);doc.setFillColor(...rowColor);doc.rect(ML,y,CW,5.5,'F');doc.setTextColor(40,120,80);doc.text('  + '+e.name+': '+e.b.toFixed(2)+'×'+e.h.toFixed(2)+' m × '+e.n,ML+2,y+4);doc.text('+'+calcZusatz(e).toFixed(2)+' m²',colX.delta,y+4);y+=6;});
@@ -2545,7 +2568,7 @@ function handleTap(wx,wy){
             rooms[ri].traufKanten=rooms[ri].traufKanten.filter(k=>k!==ei);
             delete rooms[ri].traufSeiten[ei];
           }
-          saveRoom(rooms[ri]);draw();return;
+          saveRoom(rooms[ri]);updStatus();updSidebar();syncDebugState();draw();return;
         }
       }
     }
