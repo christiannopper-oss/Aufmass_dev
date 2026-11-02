@@ -1849,7 +1849,10 @@ function draw(){
     if(hoverEdge&&hoverEdge.roomIdx===i){ctx.beginPath();ctx.arc(hoverEdge.x,hoverEdge.y,5/zoom,0,Math.PI*2);ctx.fillStyle='#a8e6cf';ctx.fill();}
   });
   if(curPts.length>0){
-    const sp=snapInfo||mouseW;
+    // Die Linie zum Cursor nur im Zeichenmodus. Sonst haengt sie auch dann noch
+    // am Mauszeiger, wenn der Raum-Dialog offen ist (tool==='none') - der Umriss
+    // selbst bleibt sichtbar, damit man sieht, welchen Raum man gerade benennt.
+    const sp=(tool==='draw')?(snapInfo||mouseW):null;
     ctx.beginPath();ctx.moveTo(curPts[0].x,curPts[0].y);for(const p of curPts)ctx.lineTo(p.x,p.y);if(sp)ctx.lineTo(sp.x,sp.y);
     ctx.strokeStyle='#c8a96e';ctx.lineWidth=2/zoom;ctx.setLineDash([6/zoom,3/zoom]);ctx.stroke();ctx.setLineDash([]);
     curPts.forEach((p,i)=>{ctx.beginPath();ctx.arc(p.x,p.y,i===0?6/zoom:4/zoom,0,Math.PI*2);ctx.fillStyle=i===0?'#e74c3c':'#c8a96e';ctx.fill();});
@@ -2258,6 +2261,10 @@ function openRoomModal(){
   editRoomIdx=null;pendingPts=[...curPts];
   // Deactivate draw tool while modal is open so no stray points are placed
   tool='none';
+  // setTool() waere hier falsch (es wuerde curPts leeren und damit den Umriss
+  // ausblenden), die Toolbar muss aber trotzdem aus dem Zeichenmodus:
+  const _ind=document.getElementById('btn-draw-active'); if(_ind)_ind.style.display='none';
+  updStatus();
   document.getElementById('room-modal-title').textContent='Raum erfassen';
   document.getElementById('m-name').value='';
   document.getElementById('m-ok').disabled=false;
@@ -2279,10 +2286,22 @@ function openEditRoom(i){
 }
 async function closeRoom(ok){
   document.getElementById('mw-room').style.display='none';
-  if(ok){const n=document.getElementById('m-name').value.trim(),h=parseFloat(document.getElementById('m-h').value)||2.5;
-    if(n){if(editRoomIdx!==null){rooms[editRoomIdx].name=n;rooms[editRoomIdx].height=h;await saveRoom(rooms[editRoomIdx]);}
-    else if(pendingPts){const rm={name:n,height:h,points:pendingPts,abzuege:[],zusaetze:[]};rooms.push(rm);await saveRoom(rm);}}}
-  editRoomIdx=null;pendingPts=null;curPts=[];setTool('select');updStatus();updSidebar();syncDebugState();draw();
+  const n=ok?document.getElementById('m-name').value.trim():'';
+  const h=parseFloat(document.getElementById('m-h').value)||2.5;
+  const idx=editRoomIdx, pend=pendingPts;
+  let target=null;
+  if(n){
+    if(idx!==null){rooms[idx].name=n;rooms[idx].height=h;target=rooms[idx];}
+    else if(pend){target={name:n,height:h,points:pend,abzuege:[],zusaetze:[]};rooms.push(target);}
+  }
+  // Zeichenzustand SYNCHRON zuruecksetzen, vor dem await auf saveRoom(). Sonst
+  // bleiben waehrend des Speicherns (Netzlaufzeit!) die alten Punkte stehen, und
+  // ein spaetes setTool('select') reisst den Nutzer wieder aus einem Raum, den er
+  // inzwischen begonnen hat.
+  editRoomIdx=null;pendingPts=null;mouseW=null;snapInfo=null;
+  setTool('select'); // leert curPts
+  updStatus();updSidebar();syncDebugState();draw();
+  if(target)await saveRoom(target);
 }
 async function closeRef(ok){
   document.getElementById('mw-ref').style.display='none';
@@ -3224,6 +3243,13 @@ function updToolbarLockState(){
   const hasPlan=!!(img||schnittImg);
   const delPlanBtn=document.getElementById('btn-del-plan');
   if(delPlanBtn)delPlanBtn.style.display=hasPlan?'':'none';
+  // openFloor() sperrt btn-rotate und btn-del-plan mit, gibt sie aber nie wieder
+  // frei - beide blieben dadurch die ganze Sitzung tot. Beide wirken immer auf
+  // den Plan der aktuellen Ansicht, also auch danach richten.
+  const hasViewPlan = viewMode==='schnitt' ? !!schnittImg : !!img;
+  ['btn-rotate','btn-del-plan'].forEach(id=>{
+    const b=document.getElementById(id);if(b)b.classList.toggle('tb-locked',!hasViewPlan);
+  });
   const isDach=!!(currentFloor?.dach_config?.aktiv);
   if(isDach && viewMode==='schnitt'){
     const hasRef=refConfirmed||(refPtsSchnitt.length===2);
